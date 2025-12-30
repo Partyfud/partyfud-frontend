@@ -55,9 +55,9 @@ export default function CatererLayout({
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        router.replace('/login');
+        router.replace('/admin/login');
       } else if (user.type !== 'CATERER') {
-        router.replace('/login');
+        router.replace('/admin/login');
       }
     }
   }, [user, loading, router]);

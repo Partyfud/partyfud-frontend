@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,9 +26,9 @@ export default function LoginPage() {
 
   // Redirect if already logged in or after successful login
   useEffect(() => {
-    if (user && !authLoading) {
+    if (user && !authLoading ) {
       setIsLoading(false); // Reset loading when user is available
-      
+
       // Redirect immediately based on user type
       if (user.type === 'CATERER') {
         router.replace('/caterer/dashboard');
@@ -46,7 +47,7 @@ export default function LoginPage() {
 
     try {
       const result = await login(formData.email, formData.password);
-      
+
       if (result.error) {
         // Ensure error is always a string
         setError(typeof result.error === 'string' ? result.error : String(result.error));
@@ -65,8 +66,8 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Food Theme Visual */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#268700] to-[#1f6b00] relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
+      <div className="hidden lg:flex lg:w-1/2 bg-linear-to-br from-[#268700] to-[#1f6b00] relative overflow-hidden">
+        {/* <div className="absolute inset-0 opacity-10">
           <div className="absolute top-10 left-10 text-6xl">🍕</div>
           <div className="absolute top-32 right-20 text-5xl">🍔</div>
           <div className="absolute bottom-32 left-20 text-6xl">🍰</div>
@@ -98,89 +99,102 @@ export default function LoginPage() {
               <span>Trusted by Thousands</span>
             </div>
           </div>
-        </div>
+        </div> */}
+        <Image src="/left_ui.svg" alt="Food Theme" fill className="object-cover" />
+        <div className='absolute text-5xl text-white m-8 p-6'>Grow your catering <br></br>business with PartyFud</div>
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          {/* Mobile Logo */}
-          <div className="lg:hidden flex justify-center mb-6">
-            <div className="w-16 h-16 bg-[#268700] rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-2xl">P</span>
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-center text-3xl font-bold text-gray-900 mb-2">
-              Welcome Back!
-            </h2>
-            <p className="text-center text-base text-gray-600">
-              Sign in to continue to Party Fud
-            </p>
-          </div>
-
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-md shadow-sm">
-                <p className="font-medium">{error}</p>
-              </div>
-            )}
-
-            <div className="space-y-5">
-              <Input
-                label="Email address"
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="Enter your email"
-              />
-              <Input
-                label="Password"
-                type="password"
-                required
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Enter your password"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 text-[#268700] focus:ring-[#268700] border-gray-300 rounded"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                  Remember me
-                </label>
-              </div>
-
-              <div className="text-sm">
-                <Link href="#" className="font-medium text-[#268700] hover:text-[#1f6b00]">
-                  Forgot password?
-                </Link>
-              </div>
+      <div className="w-full lg:w-1/2 flex flex-col bg-white py-12 px-4 sm:px-6 lg:px-8">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="max-w-md w-full space-y-8">
+            {/* Mobile Logo */}
+            <div className="flex justify-center mb-6">
+              <Image src="/logo_partyfud.svg" alt="Party Fud Logo" width={128} height={40} />
             </div>
 
             <div>
-              <Button type="submit" variant="primary" className="w-full py-3 text-base font-semibold" isLoading={isLoading}>
-                Sign in
-              </Button>
-            </div>
-
-            <div className="text-center">
-              <p className="text-sm text-gray-600">
-                Don't have an account?{' '}
-                <Link href="/signup" className="font-semibold text-[#268700] hover:text-[#1f6b00]">
-                  Sign up for free
-                </Link>
+              <h2 className="text-center text-3xl font-bold text-gray-900 mb-2">
+                Welcome Back!
+              </h2>
+              <p className="text-center text-base text-gray-600">
+                Sign in to continue to Party Fud
               </p>
             </div>
-          </form>
+
+            <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+              {error && (
+                <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-md shadow-sm">
+                  <p className="font-medium">{error}</p>
+                </div>
+              )}
+
+              <div className="space-y-5">
+                <Input
+                  label="Email address"
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="Enter your email"
+                />
+                <Input
+                  label="Password"
+                  type="password"
+                  required
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="Enter your password"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    className="h-4 w-4 text-[#268700] focus:ring-[#268700] border-gray-300 rounded"
+                  />
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+                    Remember me
+                  </label>
+                </div>
+
+                <div className="text-sm">
+                  <Link href="#" className="font-medium text-[#268700] hover:text-[#1f6b00]">
+                    Forgot password?
+                  </Link>
+                </div>
+              </div>
+
+              <div>
+                <Button type="submit" variant="primary" className="w-full py-3 text-base font-semibold" isLoading={isLoading}>
+                  Sign in
+                </Button>
+              </div>
+
+              <div className="text-center">
+                <p className="text-sm text-gray-600">
+                  Don't have an account?{' '}
+                  <Link href="/admin/signup" className="font-semibold text-[#268700] hover:text-[#1f6b00]">
+                    Sign up for free
+                  </Link>
+                </p>
+
+                <Link href="/caterer/login" className="flex justify-center">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    className="w-[60%] py-2 text-base font-semibold mt-24"
+                  >
+                    Login / Signup as Caterer
+                  </Button>
+                </Link>
+
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </div>

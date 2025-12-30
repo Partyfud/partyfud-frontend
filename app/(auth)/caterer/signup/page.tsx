@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -78,7 +79,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex">
       {/* Left Side - Food Theme Visual */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#268700] to-[#1f6b00] relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
+        {/* <div className="absolute inset-0 opacity-10">
           <div className="absolute top-10 left-10 text-6xl">🎂</div>
           <div className="absolute top-32 right-20 text-5xl">🍖</div>
           <div className="absolute bottom-32 left-20 text-6xl">🍕</div>
@@ -111,17 +112,17 @@ export default function SignupPage() {
               <span>24/7 Customer Support</span>
             </div>
           </div>
-        </div>
+        </div> */}
+        <Image src="/left_ui.svg" alt="Food Theme" fill className="object-cover" />
+                <div className='absolute text-5xl text-white m-8 p-6'>Grow your catering <br></br>business with PartyFud</div>
       </div>
 
       {/* Right Side - Signup Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8 overflow-y-auto">
         <div className="max-w-md w-full space-y-6">
           {/* Mobile Logo */}
-          <div className="lg:hidden flex justify-center mb-6">
-            <div className="w-16 h-16 bg-[#268700] rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-2xl">P</span>
-            </div>
+          <div className="flex justify-center mb-6">
+            <Image src="/logo_partyfud.svg" alt="Party Fud Logo" width={128} height={40} />
           </div>
 
           <div>
@@ -250,7 +251,7 @@ export default function SignupPage() {
             <div className="text-center">
               <p className="text-sm text-gray-600">
                 Already have an account?{' '}
-                <Link href="/login" className="font-semibold text-[#268700] hover:text-[#1f6b00]">
+                <Link href="/admin/login" className="font-semibold text-[#268700] hover:text-[#1f6b00]">
                   Sign in
                 </Link>
               </p>
@@ -261,4 +262,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
