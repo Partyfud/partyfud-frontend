@@ -1,6 +1,8 @@
 'use client';
 
 import { useRef } from 'react';
+import { Button } from '@/components/ui/Button';
+import { useRouter } from 'next/navigation';
 
 interface Caterer {
   name: string;
@@ -43,6 +45,7 @@ const caterers: Caterer[] = [
 
 export default function TopCaterers() {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const router=useRouter();
 
   const scroll = (dir: 'left' | 'right') => {
     if (!scrollRef.current) return;
@@ -125,6 +128,7 @@ export default function TopCaterers() {
             </button>
           </div>
         </div>
+        <Button onClick={()=>router.push('/user/caterers')} className="mt-8 mx-auto block bg-[#268700] text-white px-6 py-3 rounded-md hover:bg-[#1f6b00] transition cursor-pointer">View All Caterers</Button>
       </div>
     </section>
   );
