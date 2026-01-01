@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 
 interface Caterer {
   id: number;
@@ -195,10 +196,12 @@ export default function BrowseCaterersPage() {
 
   return (
     <section className="bg-white min-h-screen">
+      <h1 className='mt-5 ml-36 text-3xl font-semibold'>Browse from Caterers</h1>
       <div className="max-w-7xl mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8">
-        
+
         {/* LEFT FILTERS */}
         <aside className="border rounded-xl p-4 h-fit">
+
           <div className="flex justify-between mb-4">
             <h3 className="font-medium">Filters</h3>
             <button
@@ -337,9 +340,12 @@ export default function BrowseCaterersPage() {
                   <span className="font-semibold text-sm">
                     AED {c.minPrice} – AED {c.maxPrice}
                   </span>
-                  <button className="bg-green-600 text-white text-xs px-3 py-1 rounded-full hover:opacity-90">
+                  <Link
+                    href={`/user/caterers/${c.id}`}
+                    className="bg-green-600 text-white text-xs px-3 py-1 rounded-full hover:opacity-90"
+                  >
                     View Menu
-                  </button>
+                  </Link>
                 </div>
               </div>
             ))}

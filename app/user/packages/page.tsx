@@ -130,6 +130,7 @@ const [date, setDate] = useState('');
 
     return (
         <section className="bg-white min-h-screen">
+            <h1 className='mt-5 ml-36 text-3xl font-semibold'>Browse from Packages</h1>
             <div className="max-w-7xl mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8">
 
                 {/* LEFT FILTERS */}
