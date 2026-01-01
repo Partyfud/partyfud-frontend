@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 
 interface Caterer {
   id: number;
@@ -144,20 +145,25 @@ const PACKAGES: Package[] = [
 ];
 
 export default function CatererMenuPage() {
-  const params = useParams();
-  const caterer = CATERERS.find((c) => c.id === Number(params.id));
+  const { catererId } = useParams<{ catererId: string }>();
+  // const params=useParams();
+
+  const caterer = CATERERS.find(
+    (c) => c.id === Number(catererId)
+  );
+
 
   if (!caterer) {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-gray-500">Caterer not found.</p>
-    </div>
-  );
-}
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-500">Caterer not found.</p>
+      </div>
+    );
+  }
 
   return (
     <section className="bg-white min-h-screen px-6 py-10">
-        <label className='text-sm ml-24 underline cursor-pointer'>Menu</label><label className='text-sm cursor-pointer'> / Package Details</label>
+      <label className='text-sm ml-24 underline cursor-pointer'>Menu</label><label className='text-sm cursor-pointer'> / Package Details</label>
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8">
 
         {/* LEFT CATERER INFO */}
@@ -192,43 +198,46 @@ export default function CatererMenuPage() {
         <div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {PACKAGES.map((pkg) => (
-              <div key={pkg.id} className="border rounded-xl p-3">
-                <div className="relative h-[180px] rounded-lg overflow-hidden">
-                  <Image
-                    src={pkg.image}
-                    alt={pkg.title}
-                    fill
-                    className="object-cover"
-                  />
+              <Link
+                key={pkg.id}
+                href={`/user/caterers/${catererId}/${pkg.id}`}>
+                <div className="border rounded-xl p-3 hover:shadow-md transition cursor-pointer">
+                  <div className="relative h-[180px] rounded-lg overflow-hidden">
+                    <Image
+                      src={pkg.image}
+                      alt={pkg.title}
+                      fill
+                      className="object-cover"
+                    />
 
-                  <div className="absolute top-2 left-2 flex gap-2">
-                    {pkg.discount && (
-                      <span className="bg-white text-xs px-2 py-1 rounded-full">
-                        {pkg.discount}
-                      </span>
-                    )}
-                    {pkg.customizable && (
-                      <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">
-                        Customisable
-                      </span>
-                    )}
+                    <div className="absolute top-2 left-2 flex gap-2">
+                      {pkg.discount && (
+                        <span className="bg-white text-xs px-2 py-1 rounded-full">
+                          {pkg.discount}
+                        </span>
+                      )}
+                      {pkg.customizable && (
+                        <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">
+                          Customisable
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
+                      ⭐ {pkg.rating}
+                    </div>
                   </div>
 
-                  <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
-                    ⭐ {pkg.rating}
-                  </div>
+                  <h4 className="mt-3 font-medium">{pkg.title}</h4>
+                  <p className="text-sm text-gray-500">{pkg.caterer}</p>
+                  <p className="mt-2 font-semibold">
+                    AED {pkg.price.toLocaleString()}
+                  </p>
                 </div>
-
-                <h4 className="mt-3 font-medium">{pkg.title}</h4>
-                <p className="text-sm text-gray-500">{pkg.caterer}</p>
-                <p className="mt-2 font-semibold">
-                  AED {pkg.price.toLocaleString()}
-                </p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
-
       </div>
     </section>
   );
