@@ -2,6 +2,8 @@
 
 import { useRef } from 'react';
 import Image from 'next/image';
+import { Button } from '@/components/ui/Button';
+import { useRouter } from 'next/navigation';
 
 interface Package {
   title: string;
@@ -20,7 +22,7 @@ const packages: Package[] = [
     price: 'AED 2,355',
     rating: 4.5,
     image: '/user/package1.svg',
-    badge: 'Customiseable',
+    badge: 'Customisable',
   },
   {
     title: 'Gourmet Italian Feast',
@@ -28,7 +30,7 @@ const packages: Package[] = [
     price: 'AED 2,355',
     rating: 4.5,
     image: '/user/package2.svg',
-    badge: 'Customiseable',
+    badge: 'Customisable',
     discount: '20% Off',
   },
   {
@@ -37,7 +39,7 @@ const packages: Package[] = [
     price: 'AED 2,355',
     rating: 4.5,
     image: '/user/package3.svg',
-    badge: 'Customiseable',
+    badge: 'Customisable',
   },
   {
     title: 'Elegant Asian Spread',
@@ -45,12 +47,13 @@ const packages: Package[] = [
     price: 'AED 2,355',
     rating: 4.5,
     image: '/user/package4.svg',
-    badge: 'Customiseable',
+    badge: 'Customisable',
   },
 ];
 
 export default function PopularPackagesPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const router=useRouter();
 
   const scroll = (direction: 'left' | 'right') => {
     if (!scrollRef.current) return;
@@ -146,6 +149,8 @@ export default function PopularPackagesPage() {
               ›
             </button>
           </div>
+
+          <Button onClick={()=>router.push('/user/packages')} className="mt-8 mx-auto block bg-[#268700] text-white px-6 py-3 rounded-md hover:bg-[#1f6b00] transition cursor-pointer">View All Packages</Button>
         </div>
       </div>
     </section>

@@ -14,42 +14,42 @@ const testimonials: Testimonial[] = [
   {
     name: 'Chen Family',
     handle: '@chenfamilyevents',
-    avatar: '/avatars/chen.png',
+    avatar: '/user/package1.svg',
     content:
       "PartyFud is helping us find the perfect caterer for our next big event. The platform is easy to use and the caterers are all highly rated. We can't wait!",
   },
   {
     name: 'Samir Patel',
     handle: '@samirpatel',
-    avatar: '/avatars/samir.png',
+    avatar: '/user/package1.svg',
     content:
       "PartyFud is a lifesaver for busy professionals like me. It's so easy to find and book catering for my meetings and events. I highly recommend it! PartyFud is the best catering platform I've ever used.",
   },
   {
     name: 'Elias',
     handle: '@elias_baker',
-    avatar: '/avatars/elias.png',
+    avatar: '/user/package1.svg',
     content:
       "Thanks to PartyFud, planning my wedding catering was stress-free. The platform made it easy to find the perfect menu and vendors. I highly recommend it!",
   },
   {
     name: 'Aisha Khan',
     handle: '@aishakhan',
-    avatar: '/avatars/aisha.png',
+    avatar: '/user/package1.svg',
     content:
       "PartyFud has made planning my family gatherings a breeze. The platform is user-friendly and the caterers are always on time and professional. Thank you, PartyFud!",
   },
   {
     name: 'Leah Petrova',
     handle: '@leahpetrova',
-    avatar: '/avatars/leah.png',
+    avatar: '/user/package1.svg',
     content:
       "PartyFud has revolutionized the way I plan corporate events. The platform is user-friendly and the caterers are top-notch. I'm so glad I found it!",
   },
   {
     name: 'Avery',
     handle: '@avery_jacks',
-    avatar: '/avatars/avery.png',
+    avatar: '/user/package1.svg',
     content:
       'I love that PartyFud is helping me find local caterers for my events. It’s a lifesaver!',
     highlight: true,

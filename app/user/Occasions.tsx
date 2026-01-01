@@ -12,8 +12,8 @@ const occasions: Occasion[] = [
   { title: 'Afternoon Tea Party', image: '/user/user_occasion1.svg' },
   { title: 'Corporate Events', image: '/user/user_occasion2.svg' },
   { title: 'Engagement Party', image: '/user/user_occasion3.svg' },
-  { title: 'Birthday Party', image: '/user/user_occasion4.svg' },
-  { title: 'Wedding Reception', image: '/user/user_occasion5.svg' },
+  { title: 'Birthday Party', image: '/user/user_occasion1.svg' },
+  { title: 'Wedding Reception', image: '/user/user_occasion2.svg' },
 ];
 
 export default function BrowseOccasionsPage() {
