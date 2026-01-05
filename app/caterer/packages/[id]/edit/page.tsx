@@ -38,7 +38,7 @@ export default function EditPackagePage() {
     console.log('📋 Package types response:', response);
     
     // Handle both response structures: direct data or nested data
-    const typesData = response.data?.data || response.data;
+    const typesData = (response.data as any)?.data || response.data;
     
     if (typesData && Array.isArray(typesData)) {
       const types = typesData.map((type: any) => ({
@@ -59,7 +59,7 @@ export default function EditPackagePage() {
     console.log('📦 Package response:', response);
 
     // Handle both response structures: direct data or nested data
-    const pkg = response.data?.data || response.data;
+    const pkg = (response.data as any)?.data || response.data;
     
     if (pkg && pkg.id) {
       console.log('✅ Package data received:', pkg);
