@@ -26,31 +26,38 @@ export default function PopularPackagesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [packageType, setPackageType] = useState<string | null>(null);
+  const [occasionName, setOccasionName] = useState<string | null>(null);
 
-  // Read package_type from URL on mount and when it changes
+  // Read package_type and occasion_name from URL on mount and when it changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const typeParam = params.get('package_type');
+      const occasionParam = params.get('occasion_name');
       setPackageType(typeParam);
+      setOccasionName(occasionParam);
     }
 
-    // Listen for URL changes (when PackageTypes component navigates)
+    // Listen for URL changes (when PackageTypes or Occasions component navigates)
     const handleLocationChange = () => {
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
         const typeParam = params.get('package_type');
+        const occasionParam = params.get('occasion_name');
         setPackageType(typeParam);
+        setOccasionName(occasionParam);
       }
     };
 
     window.addEventListener('popstate', handleLocationChange);
     // Also listen for custom events from PackageTypes
     window.addEventListener('packageTypeChanged', handleLocationChange);
+    window.addEventListener('occasionChanged', handleLocationChange);
 
     return () => {
       window.removeEventListener('popstate', handleLocationChange);
       window.removeEventListener('packageTypeChanged', handleLocationChange);
+      window.removeEventListener('occasionChanged', handleLocationChange);
     };
   }, []);
 
@@ -66,6 +73,24 @@ export default function PopularPackagesPage() {
         
         if (packageType) {
           filters.package_type = packageType;
+        }
+
+        // If occasion_name is provided, fetch occasion by name first to get its ID
+        if (occasionName) {
+          try {
+            const occasionsResponse = await userApi.getOccasions();
+            if (occasionsResponse.data?.data) {
+              const occasion = occasionsResponse.data.data.find(
+                (occ: any) => occ.name.toLowerCase() === occasionName.toLowerCase()
+              );
+              if (occasion) {
+                filters.occasion_id = occasion.id;
+              }
+            }
+          } catch (err) {
+            console.error('Error fetching occasion:', err);
+            // Continue without occasion filter if it fails
+          }
         }
         
         const response = await userApi.getAllPackages(filters);
@@ -83,7 +108,7 @@ export default function PopularPackagesPage() {
               price: pkg.total_price,
               rating: pkg.rating || undefined,
               image: pkg.cover_image_url || '/user/package1.svg',
-              badge: (pkg.items?.some((item: any) => item.is_optional) || pkg.category_selections?.length > 0) ? 'Customisable' : undefined,
+              badge: (pkg.customisation_type === 'CUSTOMISABLE' || pkg.customisation_type === 'CUSTOMIZABLE') ? 'Customisable' : undefined,
               discount: undefined, // Can be added if discount logic exists
             }));
           setPackages(mappedPackages);
@@ -99,7 +124,7 @@ export default function PopularPackagesPage() {
     };
 
     fetchPackages();
-  }, [packageType]);
+  }, [packageType, occasionName]);
 
   const scroll = (direction: 'left' | 'right') => {
     if (!scrollRef.current) return;
@@ -156,9 +181,19 @@ export default function PopularPackagesPage() {
   }
 
   // Build URL for "View All Packages" button
-  const viewAllUrl = packageType 
-    ? `/user/packages?package_type=${encodeURIComponent(packageType)}`
-    : '/user/packages';
+  const buildViewAllUrl = () => {
+    const params = new URLSearchParams();
+    if (packageType) {
+      params.append('package_type', packageType);
+    }
+    if (occasionName) {
+      params.append('occasion_name', occasionName);
+    }
+    const queryString = params.toString();
+    return queryString ? `/user/packages?${queryString}` : '/user/packages';
+  };
+
+  const viewAllUrl = buildViewAllUrl();
 
   return (
     <section className="bg-black/5 py-20">

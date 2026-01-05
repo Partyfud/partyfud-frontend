@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { userApi, Package as ApiPackage } from '@/lib/api/user.api';
@@ -18,7 +18,7 @@ interface Package {
     eventType: string;
 }
 
-export default function PackagesPage() {
+export default function MyPackagesPage() {
     // Filter states
     const [search, setSearch] = useState('');
     const [location, setLocation] = useState('');
@@ -39,6 +39,7 @@ export default function PackagesPage() {
     const [packages, setPackages] = useState<Package[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [highlightedPackageId, setHighlightedPackageId] = useState<string | null>(null);
     
     // Read package_type, occasion_id, occasion_name, and cuisine_type_id from URL on mount
     useEffect(() => {
@@ -48,6 +49,23 @@ export default function PackagesPage() {
             const occasionIdParam = params.get('occasion_id');
             const occasionNameParamValue = params.get('occasion_name');
             const cuisineTypeIdParam = params.get('cuisine_type_id');
+            const highlightParam = params.get('highlight');
+            
+            // Handle package highlighting
+            if (highlightParam) {
+                setHighlightedPackageId(highlightParam);
+                // Remove highlight from URL after setting it
+                params.delete('highlight');
+                const newUrl = params.toString() 
+                    ? `/user/mypackages?${params.toString()}`
+                    : '/user/mypackages';
+                window.history.replaceState({}, '', newUrl);
+                
+                // Clear highlight after 2 seconds
+                setTimeout(() => {
+                    setHighlightedPackageId(null);
+                }, 2000);
+            }
             
             if (typeParam) {
                 setPackageType(decodeURIComponent(typeParam));
@@ -114,10 +132,6 @@ export default function PackagesPage() {
             filters.search = search;
         }
 
-        if (location) {
-            filters.location = location;
-        }
-
         if (minGuests !== '') {
             filters.min_guests = Number(minGuests);
         }
@@ -134,27 +148,6 @@ export default function PackagesPage() {
             filters.max_price = Number(maxPrice);
         }
 
-        if (menuType) {
-            filters.menu_type = menuType;
-        }
-
-        if (packageType) {
-            filters.package_type = packageType;
-        }
-
-        if (occasionId) {
-            filters.occasion_id = occasionId;
-        }
-
-        // Support filtering by occasion_name (backend will convert to occasion_id)
-        if (occasionNameParam && !occasionId) {
-            filters.occasion_name = occasionNameParam;
-        }
-
-        if (cuisineTypeId) {
-            filters.cuisine_type_id = cuisineTypeId;
-        }
-
         if (sortBy) {
             filters.sort_by = sortBy;
         }
@@ -169,20 +162,26 @@ export default function PackagesPage() {
             setError(null);
             try {
                 const filters = buildFilters();
-                const response = await userApi.getAllPackages(filters);
+                // Use the new endpoint that gets packages for the authenticated user
+                const response = await userApi.getMyPackages(filters);
                 if (response.data?.data) {
                     // Map API response to component structure
                     const mappedPackages: Package[] = response.data.data
-                        .filter((pkg: ApiPackage) => (pkg as any).caterer?.id) // Only include packages with valid caterer ID
+                        .filter((pkg: ApiPackage) => {
+                            // Ensure package has both ID and caterer ID for navigation
+                            const hasPackageId = !!pkg.id;
+                            const hasCatererId = !!(pkg as any).caterer?.id;
+                            return hasPackageId && hasCatererId;
+                        })
                         .map((pkg: ApiPackage) => ({
                             id: pkg.id,
                             title: pkg.name,
                             caterer: (pkg as any).caterer?.name || pkg.package_type?.name || 'Unknown Caterer',
-                            catererId: (pkg as any).caterer?.id, // Get caterer ID for navigation
+                            catererId: (pkg as any).caterer?.id, // Get caterer ID for navigation to package detail page
                             price: pkg.total_price,
                             rating: pkg.rating || undefined,
                             image: pkg.cover_image_url || '/default_dish.jpg',
-                            customizable: pkg.customisation_type === 'CUSTOMISABLE' || pkg.customisation_type === 'CUSTOMIZABLE',
+                            customizable: pkg.items?.some((item: any) => item.is_optional) || pkg.category_selections?.length > 0 || false,
                             discount: undefined, // Can be added if discount logic exists
                             eventType: pkg.occasions?.[0]?.occasion?.name || 'All',
                         }));
@@ -204,7 +203,7 @@ export default function PackagesPage() {
 
         return () => clearTimeout(timeoutId);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search, location, minGuests, maxGuests, minPrice, maxPrice, menuType, sortBy, packageType, occasionId, occasionNameParam, cuisineTypeId]);
+    }, [search, minGuests, maxGuests, minPrice, maxPrice, sortBy]);
 
     const handleClearFilters = () => {
         setSearch('');
@@ -223,13 +222,13 @@ export default function PackagesPage() {
         setCuisineTypeName('');
         // Clear URL parameters
         if (packageType || occasionId || occasionNameParam || cuisineTypeId) {
-            window.history.replaceState({}, '', '/user/packages');
+            window.history.replaceState({}, '', '/user/mypackages');
         }
     };
 
     return (
         <section className="bg-[#FAFAFA] min-h-screen">
-            <h1 className='mt-5 ml-36 text-3xl font-semibold'>Browse from Packages</h1>
+            <h1 className='mt-5 ml-36 text-3xl font-semibold'>My Packages</h1>
             <div className="max-w-7xl mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8">
 
                 {/* LEFT FILTERS */}
@@ -378,8 +377,8 @@ export default function PackagesPage() {
                                             const params = new URLSearchParams(window.location.search);
                                             params.delete('package_type');
                                             const newUrl = params.toString() 
-                                                ? `/user/packages?${params.toString()}`
-                                                : '/user/packages';
+                                                ? `/user/mypackages?${params.toString()}`
+                                                : '/user/mypackages';
                                             window.history.replaceState({}, '', newUrl);
                                         }}
                                         className="text-sm text-green-700 hover:text-green-900 underline"
@@ -404,8 +403,8 @@ export default function PackagesPage() {
                                             params.delete('occasion_id');
                                             params.delete('occasion_name');
                                             const newUrl = params.toString() 
-                                                ? `/user/packages?${params.toString()}`
-                                                : '/user/packages';
+                                                ? `/user/mypackages?${params.toString()}`
+                                                : '/user/mypackages';
                                             window.history.replaceState({}, '', newUrl);
                                         }}
                                         className="text-sm text-green-700 hover:text-green-900 underline"
@@ -428,8 +427,8 @@ export default function PackagesPage() {
                                             const params = new URLSearchParams(window.location.search);
                                             params.delete('cuisine_type_id');
                                             const newUrl = params.toString() 
-                                                ? `/user/packages?${params.toString()}`
-                                                : '/user/packages';
+                                                ? `/user/mypackages?${params.toString()}`
+                                                : '/user/mypackages';
                                             window.history.replaceState({}, '', newUrl);
                                         }}
                                         className="text-sm text-green-700 hover:text-green-900 underline"
@@ -472,8 +471,8 @@ export default function PackagesPage() {
                         </div>
                     ) : packages.length === 0 ? (
                         <div className="bg-gray-50 border border-gray-200 text-gray-700 px-4 py-8 rounded text-center">
-                            <p>No packages found matching your filters.</p>
-                            <p className="text-sm mt-2">Try adjusting your search or filters.</p>
+                            <p>No packages found. You haven't created any custom packages yet.</p>
+                            <p className="text-sm mt-2">Create your first package by selecting dishes from a caterer!</p>
                         </div>
                     ) : (
                         <>
@@ -484,8 +483,12 @@ export default function PackagesPage() {
                                 {packages.map((pkg) => (
                                     <Link
                                         key={pkg.id}
-                                        href={`/user/caterers/${pkg.catererId}/${pkg.id}`}
-                                        className="bg-white border border-gray-200 rounded-xl p-3 hover:shadow-md transition cursor-pointer block"
+                                        href={`/user/mypackages/${pkg.id}`}
+                                        className={`bg-white border rounded-xl p-3 hover:shadow-md transition cursor-pointer block ${
+                                            highlightedPackageId === pkg.id
+                                                ? 'border-[#268700] border-4 shadow-lg ring-4 ring-green-200'
+                                                : 'border-gray-200'
+                                        }`}
                                     >
                                         <div className="relative h-[180px] rounded-lg overflow-hidden">
                                             <Image
@@ -530,3 +533,4 @@ export default function PackagesPage() {
         </section>
     );
 }
+

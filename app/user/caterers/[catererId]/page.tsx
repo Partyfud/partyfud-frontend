@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { userApi, type Caterer, type Package, type Dish } from '@/lib/api/user.api';
 import { Check, Plus, X } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 type TabType = 'setMenus' | 'buildYourOwn' | 'customiseMenu';
 type DietaryFilter = 'veg' | 'glutenFree' | 'nonVeg' | 'sugarFree' | null;
@@ -19,6 +20,7 @@ interface CategoryGroup {
 export default function CatererMenuPage() {
   const { catererId } = useParams<{ catererId: string }>();
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [caterer, setCaterer] = useState<Caterer | null>(null);
   const [packages, setPackages] = useState<Package[]>([]);
   const [dishes, setDishes] = useState<Dish[]>([]);
@@ -267,14 +269,67 @@ export default function CatererMenuPage() {
     if (activeTab === 'buildYourOwn') {
       if (selectedDishes.size === 0 || !catererId) return;
       
+      // Check if user is authenticated
+      if (!user) {
+        alert('You must be logged in to create a package. Please log in and try again.');
+        router.push('/login');
+        return;
+      }
+
       setAddingToCart(true);
       try {
-        // For Build Your Own, we'll need to create a custom order
-        // For now, navigate to a summary page or create cart items directly
-        // This is a placeholder - you may want to create a custom package or order
-        alert('Build Your Own cart functionality - to be implemented');
-      } catch (err) {
-        console.error('Error adding to cart:', err);
+        // Convert selected dishes Set to array
+        const dishIds = Array.from(selectedDishes);
+        
+        // Create custom package
+        const response = await userApi.createCustomPackage({
+          dish_ids: dishIds,
+          people_count: guestCount,
+        });
+
+        if (response.error) {
+          // Check if it's an authentication error
+          if (response.status === 401 || response.error.includes('Unauthorized') || response.error.includes('401')) {
+            alert('Your session has expired. Please log in again.');
+            router.push('/login');
+            return;
+          }
+          alert(response.error || 'Failed to create custom package. Please try again.');
+          return;
+        }
+
+        if (response.data?.success && response.data?.data) {
+          // Show success message and redirect to package details page
+          const newPackageId = response.data?.data?.id;
+          if (newPackageId) {
+            alert('Package created successfully! Redirecting to package details...');
+            router.push(`/user/mypackages/${newPackageId}`);
+          } else {
+            alert('Package created successfully! Go to My packages!');
+            router.push('/user/mypackages');
+          }
+        } else if (response.data?.data) {
+          // Handle case where success might not be in response but data exists
+          const newPackageId = response.data?.data?.id;
+          if (newPackageId) {
+            alert('Package created successfully! Redirecting to package details...');
+            router.push(`/user/mypackages/${newPackageId}`);
+          } else {
+            alert('Package created successfully! Go to My packages!');
+            router.push('/user/mypackages');
+          }
+        } else {
+          alert('Failed to create custom package. Please try again.');
+        }
+      } catch (err: any) {
+        console.error('Error creating custom package:', err);
+        // Check if it's an authentication error
+        if (err?.message?.includes('401') || err?.message?.includes('Unauthorized')) {
+          alert('Your session has expired. Please log in again.');
+          router.push('/login');
+        } else {
+          alert(err?.message || 'Failed to create custom package. Please try again.');
+        }
       } finally {
         setAddingToCart(false);
       }
@@ -643,7 +698,7 @@ export default function CatererMenuPage() {
               </div>
             )}
 
-            {/* Footer with Total and Add to Cart */}
+            {/* Footer with Total and Create Package */}
             <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4">
               <div className="max-w-7xl mx-auto flex justify-between items-center">
                 <div>
@@ -662,7 +717,7 @@ export default function CatererMenuPage() {
                       : 'bg-[#268700] text-white hover:bg-[#1f6b00]'
                   }`}
                 >
-                  {addingToCart ? 'Adding...' : 'Add to Cart'}
+                  {addingToCart ? 'Creating...' : 'Create Package'}
                 </button>
               </div>
             </div>

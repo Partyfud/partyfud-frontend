@@ -53,7 +53,21 @@ export default function BrowseCaterersPage() {
           setError(response.error);
           setCaterers([]);
         } else if (response.data?.data) {
-          setCaterers(response.data.data);
+          const fetchedCaterers = response.data.data;
+          setCaterers(fetchedCaterers);
+          
+          // Check if any caterer has customizable packages and update checkbox state
+          // Only update if customizable is currently false and we have customizable packages
+          const hasCustomizablePackages = fetchedCaterers.some((caterer: Caterer) => 
+            caterer.packages?.some((pkg: any) => 
+              pkg.customisation_type === 'CUSTOMISABLE' || pkg.customisation_type === 'CUSTOMIZABLE'
+            )
+          );
+          
+          // Only update if the value would actually change to prevent infinite loop
+          if (hasCustomizablePackages && !menuType.customizable) {
+            setMenuType(prev => ({ ...prev, customizable: true }));
+          }
         }
       } catch (err) {
         setError('Failed to fetch caterers');
@@ -154,7 +168,7 @@ export default function BrowseCaterersPage() {
             <label className="flex gap-2">
               <input
                 type="checkbox"
-                // checked={menuType.customizable}
+                checked={menuType.customizable}
                 onChange={(e) =>
                   setMenuType({ ...menuType, customizable: e.target.checked })
                 }
