@@ -9,6 +9,7 @@ interface CatererDetail {
   business_name: string;
   business_type: string;
   business_description: string | null;
+  cuisines: string[];
   service_area: string | null;
   minimum_guests: number | null;
   maximum_guests: number | null;
@@ -66,7 +67,8 @@ export default function CatererDetailPage() {
       }
 
       if (response.data?.success && response.data.data) {
-        setCaterer(response.data.data);
+        // Backend returns cuisines from the caterer's packages
+        setCaterer(response.data.data as any);
       } else {
         setError('Caterer information not found.');
       }
@@ -218,6 +220,26 @@ export default function CatererDetailPage() {
 
         {/* Main Content */}
         <div className="bg-white rounded-xl shadow-sm p-8 space-y-8">
+          {/* Cuisines */}
+          {caterer.cuisines && caterer.cuisines.length > 0 && (
+            <section className="border-b border-gray-200 pb-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span className="w-1 h-6 bg-gray-300 rounded-full"></span>
+                Cuisines
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {caterer.cuisines.map((cuisine, idx) => (
+                  <span
+                    key={idx}
+                    className="text-sm font-medium bg-green-100 text-green-700 px-3 py-1.5 rounded-full border border-green-200"
+                  >
+                    {cuisine}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Business Information */}
           <section className="border-b border-gray-200 pb-6 last:border-b-0">
             <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
