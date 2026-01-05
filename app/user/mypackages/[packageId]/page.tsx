@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import React from 'react';
 import { userApi, type Package } from '@/lib/api/user.api';
-import { Check } from 'lucide-react';
+import { Check, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 // import { Testimonials } from '@/user/Testimonials';
 
@@ -14,6 +14,12 @@ interface PackageType {
     name: string;
     image_url?: string | null;
     description?: string | null;
+}
+
+interface CategoryGroup {
+    categoryName: string;
+    dishes: any[];
+    maxSelections?: number;
 }
 
 export default function PackageDetailsPage() {
@@ -31,15 +37,17 @@ export default function PackageDetailsPage() {
     const [cartMessage, setCartMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [isAddedToCart, setIsAddedToCart] = useState(false);
     const [cartItemId, setCartItemId] = useState<string | null>(null);
-    const [selectedDishIds, setSelectedDishIds] = useState<Set<string>>(new Set());
-    const [creatingPackage, setCreatingPackage] = useState(false);
-    const [packageMessage, setPackageMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    
+    // Customization states
+    const [isCustomizable, setIsCustomizable] = useState(false);
+    const [selectedDishes, setSelectedDishes] = useState<Set<string>>(new Set());
+    const [savingCustomPackage, setSavingCustomPackage] = useState(false);
+    const [showCustomizeSection, setShowCustomizeSection] = useState(false);
 
     const params = useParams();
+    const packageId = params.packageId as string;
     const router = useRouter();
     const { user } = useAuth();
-    const packageId = params.packageId as string;
-    const catererId = params.catererId as string;
 
     // Fetch package types
     useEffect(() => {
@@ -86,6 +94,25 @@ export default function PackageDetailsPage() {
                     // Set default guests to the package's people_count
                     if (packageData.people_count) {
                         setGuests(packageData.people_count);
+                    }
+                    
+                    // Check if package is customizable based on customisation_type field
+                    const isPackageCustomizable = packageData.customisation_type === 'CUSTOMISABLE' || 
+                                                  packageData.customisation_type === 'CUSTOMIZABLE';
+                    setIsCustomizable(isPackageCustomizable);
+                    
+                    // Initialize selected dishes with all items (both optional and non-optional) if customizable
+                    if (packageData.items && isPackageCustomizable) {
+                        const initialSelected = new Set<string>();
+                        packageData.items.forEach((item: any) => {
+                            // Handle both item.dish and direct dish reference
+                            const dish = item.dish || item;
+                            if (dish && dish.id) {
+                                // Include all dishes if package is customizable
+                                initialSelected.add(dish.id);
+                            }
+                        });
+                        setSelectedDishes(initialSelected);
                     }
                 }
             } catch (err) {
@@ -253,125 +280,6 @@ export default function PackageDetailsPage() {
         }
     }, [eventType, location, guests, date]);
 
-    // Check if package is customizable
-    const isCustomizable = pkg?.customisation_type === 'CUSTOMISABLE' || pkg?.customisation_type === 'CUSTOMIZABLE';
-
-    // Toggle dish selection
-    const toggleDishSelection = (dishId: string) => {
-        if (!isCustomizable) return;
-        
-        const newSelected = new Set(selectedDishIds);
-        if (newSelected.has(dishId)) {
-            newSelected.delete(dishId);
-        } else {
-            newSelected.add(dishId);
-        }
-        setSelectedDishIds(newSelected);
-    };
-
-    // Check if dish is selected
-    const isDishSelected = (dishId: string) => {
-        return selectedDishIds.has(dishId);
-    };
-
-    // Handle Create Custom Package
-    const handleCreateCustomPackage = async () => {
-        if (!pkg || selectedDishIds.size === 0 || !user) {
-            setPackageMessage({ type: 'error', text: 'Please select at least one dish' });
-            return;
-        }
-
-        if (!guests || guests <= 0) {
-            setPackageMessage({ type: 'error', text: 'Please select number of guests' });
-            return;
-        }
-
-        setCreatingPackage(true);
-        setPackageMessage(null);
-
-        try {
-            // Convert selected dishes Set to array and filter out any invalid IDs
-            const dishIds = Array.from(selectedDishIds).filter(id => id && id.trim() !== '');
-            
-            if (dishIds.length === 0) {
-                setPackageMessage({ type: 'error', text: 'Please select at least one valid dish' });
-                setCreatingPackage(false);
-                return;
-            }
-            
-            // Validate that all selected dishes belong to dishes in the package
-            const packageDishIds = new Set(pkg.items.map((item: any) => item.dish?.id).filter(Boolean));
-            const invalidDishes = dishIds.filter(id => !packageDishIds.has(id));
-            
-            if (invalidDishes.length > 0) {
-                setPackageMessage({ type: 'error', text: 'Some selected dishes are not valid. Please refresh the page and try again.' });
-                setCreatingPackage(false);
-                return;
-            }
-            
-            // Create custom package
-            const response = await userApi.createCustomPackage({
-                dish_ids: dishIds,
-                people_count: guests,
-                package_type_id: eventType || pkg.package_type?.id,
-            });
-
-            if (response.error) {
-                if (response.status === 401 || response.error.includes('Unauthorized') || response.error.includes('401')) {
-                    setPackageMessage({ type: 'error', text: 'Your session has expired. Please log in again.' });
-                    setTimeout(() => router.push('/login'), 2000);
-                    return;
-                }
-                // Show the actual error message from backend
-                const errorMessage = response.error.includes('All dishes must be from the same caterer') 
-                    ? 'All selected dishes must be from the same caterer. Please ensure all dishes belong to this package\'s caterer.'
-                    : response.error || 'Failed to create custom package';
-                setPackageMessage({ type: 'error', text: errorMessage });
-            } else if (response.data?.success || response.data?.data) {
-                const newPackageId = response.data?.data?.id;
-                setPackageMessage({ type: 'success', text: 'Package created successfully! Redirecting to package details...' });
-                // Redirect to the created package details page after 1.5 seconds
-                if (newPackageId) {
-                    setTimeout(() => {
-                        router.push(`/user/mypackages/${newPackageId}`);
-                    }, 1500);
-                } else {
-                    // Fallback to my packages list if ID is not available
-                    setTimeout(() => {
-                        router.push('/user/mypackages');
-                    }, 1500);
-                }
-            } else {
-                setPackageMessage({ type: 'error', text: 'Failed to create custom package' });
-            }
-        } catch (err: any) {
-            console.error('Error creating custom package:', err);
-            if (err?.message?.includes('401') || err?.message?.includes('Unauthorized')) {
-                setPackageMessage({ type: 'error', text: 'Your session has expired. Please log in again.' });
-                setTimeout(() => router.push('/login'), 2000);
-            } else {
-                setPackageMessage({ type: 'error', text: err?.message || 'Failed to create custom package' });
-            }
-        } finally {
-            setCreatingPackage(false);
-        }
-    };
-
-    // Reset selected dishes when package changes
-    useEffect(() => {
-        setSelectedDishIds(new Set());
-    }, [packageId]);
-
-    // Initialize selected dishes with all items if customizable (optional - you can start with empty selection)
-    useEffect(() => {
-        if (pkg && isCustomizable && selectedDishIds.size === 0) {
-            // Optionally pre-select all dishes, or leave empty for user to select
-            // Uncomment the next lines if you want all dishes pre-selected:
-            // const allDishIds = new Set(pkg.items.map((item: any) => item.dish?.id).filter(Boolean));
-            // setSelectedDishIds(allDishIds);
-        }
-    }, [pkg, isCustomizable]);
-
     // Group items by category for display
     const groupedItems = pkg ? pkg.items.reduce((acc: any, item) => {
         const categoryName = item.dish?.category?.name || item.dish?.category || 'Uncategorized';
@@ -381,6 +289,124 @@ export default function PackageDetailsPage() {
         acc[categoryName].push(item);
         return acc;
     }, {}) : {};
+
+    // Get all dishes from package items for customization
+    const getAllDishesFromPackage = () => {
+        if (!pkg || !pkg.items) return [];
+        const dishMap = new Map<string, any>();
+        pkg.items.forEach((item: any) => {
+            // Handle both item.dish and direct dish reference
+            const dish = item.dish || item;
+            if (dish && dish.id) {
+                dishMap.set(dish.id, dish);
+            }
+        });
+        return Array.from(dishMap.values());
+    };
+
+    // Group dishes by category for customization
+    const groupDishesByCategory = (): CategoryGroup[] => {
+        const dishes = getAllDishesFromPackage();
+        const grouped: { [key: string]: any[] } = {};
+        
+        dishes.forEach((dish) => {
+            const categoryName = dish.category?.name || 'Other';
+            if (!grouped[categoryName]) {
+                grouped[categoryName] = [];
+            }
+            grouped[categoryName].push(dish);
+        });
+
+        return Object.entries(grouped).map(([categoryName, categoryDishes]) => ({
+            categoryName,
+            dishes: categoryDishes,
+        }));
+    };
+
+    // Toggle dish selection
+    const toggleDishSelection = (dishId: string) => {
+        const newSelected = new Set(selectedDishes);
+        if (newSelected.has(dishId)) {
+            newSelected.delete(dishId);
+        } else {
+            newSelected.add(dishId);
+        }
+        setSelectedDishes(newSelected);
+    };
+
+    // Check if dish is selected
+    const isDishSelected = (dishId: string) => {
+        return selectedDishes.has(dishId);
+    };
+
+    // Calculate total price for customized package
+    const calculateCustomizedTotal = () => {
+        if (!pkg) return 0;
+        let total = 0;
+        selectedDishes.forEach((dishId) => {
+            const dish = getAllDishesFromPackage().find(d => d.id === dishId);
+            if (dish) {
+                total += Number(dish.price) * guests;
+            }
+        });
+        return total;
+    };
+
+    // Handle Save Customised Package
+    const handleSaveCustomPackage = async () => {
+        if (!user) {
+            alert('You must be logged in to create a custom package. Please log in and try again.');
+            router.push('/login');
+            return;
+        }
+
+        if (selectedDishes.size === 0) {
+            alert('Please select at least one dish to create a custom package.');
+            return;
+        }
+
+        setSavingCustomPackage(true);
+        try {
+            const dishIds = Array.from(selectedDishes);
+            
+            const response = await userApi.createCustomPackage({
+                dish_ids: dishIds,
+                people_count: guests || pkg?.people_count || 50,
+                package_type_id: pkg?.package_type?.id,
+            });
+
+            if (response.error) {
+                if (response.status === 401 || response.error.includes('Unauthorized') || response.error.includes('401')) {
+                    alert('Your session has expired. Please log in again.');
+                    router.push('/login');
+                    return;
+                }
+                alert(response.error || 'Failed to create custom package. Please try again.');
+                return;
+            }
+
+            if (response.data?.success && response.data?.data) {
+                const newPackageId = response.data.data.id;
+                // Redirect to mypackages with the new package ID to highlight it
+                router.push(`/user/mypackages?highlight=${newPackageId}`);
+            } else if (response.data?.data) {
+                const newPackageId = response.data.data.id;
+                router.push(`/user/mypackages?highlight=${newPackageId}`);
+            } else {
+                alert('Failed to create custom package. Please try again.');
+            }
+        } catch (err: any) {
+            console.error('Error creating custom package:', err);
+            if (err?.message?.includes('401') || err?.message?.includes('Unauthorized')) {
+                alert('Your session has expired. Please log in again.');
+                router.push('/login');
+            } else {
+                alert(err?.message || 'Failed to create custom package. Please try again.');
+            }
+        } finally {
+            setSavingCustomPackage(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -437,10 +463,20 @@ export default function PackageDetailsPage() {
                     </div>
 
                     {/* Menu Items */}
-                    <div className="bg-white border border-gray-200 rounded-xl p-4">
-                        <h3 className="font-medium mb-2">
-                            Menu Items {pkg.category_selections.length > 0 ? '(Customizable)' : '(Fixed)'}
-                        </h3>
+                    <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6">
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="font-medium">
+                                Menu Items {isCustomizable ? '(Customizable)' : '(Fixed)'}
+                            </h3>
+                            {isCustomizable && (
+                                <button
+                                    onClick={() => setShowCustomizeSection(!showCustomizeSection)}
+                                    className="px-4 py-2 bg-[#268700] text-white rounded-lg text-sm font-medium hover:bg-[#1f6b00] transition"
+                                >
+                                    {showCustomizeSection ? 'Hide Customization' : 'Customize Package'}
+                                </button>
+                            )}
+                        </div>
 
                         <p className="text-sm text-gray-600 mb-4">
                             Package includes {pkg.items.length} items for {pkg.people_count} people.
@@ -457,55 +493,25 @@ export default function PackageDetailsPage() {
                                     
                                     {/* Dishes List */}
                                     <div className="bg-white">
-                                        {items.map((item: any, itemIndex: number) => {
-                                            // Only allow selection if dish has a valid ID
-                                            const dishId = item.dish?.id;
-                                            const hasValidDishId = dishId && dishId.trim() !== '';
-                                            const isSelected = hasValidDishId ? isDishSelected(dishId) : false;
-                                            
-                                            return (
-                                                <div
-                                                    key={item.id}
-                                                    onClick={() => hasValidDishId && toggleDishSelection(dishId)}
-                                                    className={`py-3 px-4 border-b border-gray-200 ${
-                                                        itemIndex === items.length - 1 && categoryIndex !== Object.keys(groupedItems).length - 1
-                                                            ? 'border-b-2 border-gray-300'
-                                                            : ''
-                                                    } ${
-                                                        isCustomizable && hasValidDishId
-                                                            ? 'cursor-pointer hover:bg-gray-50 transition-colors'
-                                                            : !hasValidDishId
-                                                            ? 'opacity-60 cursor-not-allowed'
-                                                            : ''
-                                                    } ${
-                                                        isCustomizable && isSelected
-                                                            ? 'bg-green-50 border-l-4 border-l-[#268700]'
-                                                            : ''
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-sm text-gray-700">
-                                                            {item.dish?.name || 'Unknown Dish'}
-                                                            {item.quantity > 1 && (
-                                                                <span className="text-gray-500 ml-2">(x{item.quantity})</span>
-                                                            )}
-                                                            {!hasValidDishId && (
-                                                                <span className="text-xs text-red-500 ml-2">(Not available)</span>
-                                                            )}
-                                                        </span>
-                                                        {isCustomizable && hasValidDishId && (
-                                                            <div className="ml-4">
-                                                                {isSelected ? (
-                                                                    <Check className="w-5 h-5 text-[#268700]" />
-                                                                ) : (
-                                                                    <div className="w-5 h-5 border-2 border-gray-300 rounded" />
-                                                                )}
-                                                            </div>
+                                        {items.map((item: any, itemIndex: number) => (
+                                            <div
+                                                key={item.id}
+                                                className={`py-3 px-4 border-b border-gray-200 ${
+                                                    itemIndex === items.length - 1 && categoryIndex !== Object.keys(groupedItems).length - 1
+                                                        ? 'border-b-2 border-gray-300'
+                                                        : ''
+                                                }`}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm text-gray-700">
+                                                        {item.dish?.name || 'Unknown Dish'}
+                                                        {item.quantity > 1 && (
+                                                            <span className="text-gray-500 ml-2">(x{item.quantity})</span>
                                                         )}
-                                                    </div>
+                                                    </span>
                                                 </div>
-                                            );
-                                        })}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             ))}
@@ -522,39 +528,100 @@ export default function PackageDetailsPage() {
                                 ))}
                             </div>
                         )}
-
-                        {/* Create Package Button (only for customizable packages when dishes are selected) */}
-                        {isCustomizable && selectedDishIds.size > 0 && (
-                            <div className="mt-6 pt-4 border-t border-gray-200">
-                                {packageMessage && (
-                                    <div className={`mb-4 p-3 rounded-lg text-sm ${
-                                        packageMessage.type === 'success' 
-                                            ? 'bg-green-100 text-green-800 border border-green-300' 
-                                            : 'bg-red-100 text-red-800 border border-red-300'
-                                    }`}>
-                                        {packageMessage.text}
-                                    </div>
-                                )}
-                                <button
-                                    onClick={handleCreateCustomPackage}
-                                    disabled={creatingPackage || selectedDishIds.size === 0 || !guests || guests <= 0}
-                                    className={`w-full py-3 rounded-full text-white font-medium transition-all ${
-                                        creatingPackage || selectedDishIds.size === 0 || !guests || guests <= 0
-                                            ? 'bg-gray-400 cursor-not-allowed'
-                                            : 'bg-[#268700] hover:bg-[#1f6b00] cursor-pointer'
-                                    }`}
-                                >
-                                    {creatingPackage 
-                                        ? 'Creating Package...' 
-                                        : `Create Custom Package (${selectedDishIds.size} ${selectedDishIds.size === 1 ? 'dish' : 'dishes'} selected)`
-                                    }
-                                </button>
-                                <p className="text-xs text-gray-500 mt-2 text-center">
-                                    Selected dishes will be used to create your custom package
-                                </p>
-                            </div>
-                        )}
                     </div>
+
+                    {/* Customization Section */}
+                    {isCustomizable && showCustomizeSection && (
+                        <div className="bg-white border border-gray-200 rounded-xl p-4 mt-6">
+                            <h3 className="font-semibold text-lg mb-4 text-gray-900">Customize Your Package</h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                                Select dishes from the menu below to create your custom package.
+                            </p>
+
+                            {groupDishesByCategory().length === 0 ? (
+                                <div className="text-center py-8 text-gray-500">
+                                    <p>No dishes available for customization.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {groupDishesByCategory().map((categoryGroup) => {
+                                        const selectedInCategory = Array.from(selectedDishes).filter(id => {
+                                            const dish = getAllDishesFromPackage().find(d => d.id === id);
+                                            return dish?.category?.name === categoryGroup.categoryName;
+                                        }).length;
+
+                                        return (
+                                            <div key={categoryGroup.categoryName} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                                <h4 className="font-semibold text-lg text-gray-900 mb-4">
+                                                    {categoryGroup.categoryName}
+                                                    {selectedInCategory > 0 && (
+                                                        <span className="text-sm text-gray-500 ml-2">
+                                                            ({selectedInCategory} selected)
+                                                        </span>
+                                                    )}
+                                                </h4>
+                                                <div className="space-y-2">
+                                                    {categoryGroup.dishes.map((dish) => {
+                                                        const isSelected = isDishSelected(dish.id);
+
+                                                        return (
+                                                            <div
+                                                                key={dish.id}
+                                                                className={`flex items-center justify-between p-3 rounded-lg border transition cursor-pointer ${
+                                                                    isSelected
+                                                                        ? 'border-[#268700] bg-green-50'
+                                                                        : 'border-gray-200 hover:border-gray-300'
+                                                                }`}
+                                                                onClick={() => toggleDishSelection(dish.id)}
+                                                            >
+                                                                <div className="flex-1">
+                                                                    <p className="font-medium text-gray-900">{dish.name}</p>
+                                                                    <p className="text-sm text-gray-600">
+                                                                        {dish.cuisine_type?.name || 'Cuisine'} • AED {Number(dish.price).toLocaleString()}/person
+                                                                    </p>
+                                                                </div>
+                                                                <div className="ml-4">
+                                                                    {isSelected ? (
+                                                                        <Check className="w-5 h-5 text-[#268700]" />
+                                                                    ) : (
+                                                                        <Plus className="w-5 h-5 text-gray-400" />
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Save Button */}
+                            <div className="mt-6 pt-4 border-t border-gray-200">
+                                <div className="flex justify-between items-center mb-4">
+                                    <div>
+                                        <p className="text-sm text-gray-600">Total Amount</p>
+                                        <p className="text-2xl font-bold text-gray-900">
+                                            AED {calculateCustomizedTotal().toLocaleString()}
+                                        </p>
+                                        <p className="text-sm text-gray-500">{guests || pkg.people_count} guests</p>
+                                    </div>
+                                    <button
+                                        onClick={handleSaveCustomPackage}
+                                        disabled={selectedDishes.size === 0 || savingCustomPackage}
+                                        className={`px-8 py-3 rounded-full font-semibold transition ${
+                                            selectedDishes.size === 0 || savingCustomPackage
+                                                ? 'bg-gray-400 cursor-not-allowed text-white'
+                                                : 'bg-[#268700] text-white hover:bg-[#1f6b00]'
+                                        }`}
+                                    >
+                                        {savingCustomPackage ? 'Saving...' : 'Save Customised Package'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* RIGHT SIDEBAR */}

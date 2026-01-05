@@ -1,14 +1,18 @@
 'use client';
 import { useEffect } from 'react';
-import Plan from '../Plan';
-import Hero from '../Hero';
-import Occasions from '../Occasions';
-import Package from '../Package';
-import PackageTypes from '../PackageTypes';
-import Caterers from '../Caterers';
-import Categories from '../Categories';
-import Partner from '../Partner';
-import Testimonials from '../Testimonials';
+import Plan from '../../../components/home/Plan';
+import Hero from '../../../components/home/Hero';
+import Occasions from '../../../components/home/Occasions';
+import Package from '../../../components/home/Package';
+import PackageTypes from '../../../components/home/PackageTypes';
+import EventTypes from '../../../components/home/EventTypes';
+import WhyChoose from '../../../components/home/WhyChoose';
+import CallToAction from '../../../components/home/CallToAction';
+import Caterers from '../../../components/home/Caterers';
+import Categories from '../../../components/home/Categories';
+import Partner from '../../../components/home/Partner';
+import Testimonials from '../../../components/home/Testimonials';
+import HowItWorks from '../../../components/home/HowItWorks';  
 
 export default function Dashboard() {
     useEffect(() => {
@@ -35,10 +39,14 @@ export default function Dashboard() {
     return (
         <>
         <Hero/>
-        <Plan/>
-        {/* <Occasions/> */}
-        <PackageTypes/>
+        {/* <Plan/> */}
+        <HowItWorks/>
+        {/* <PackageTypes/> */}
+        <Occasions/>
         <Package/>
+        <EventTypes/>
+        <WhyChoose/>
+        {/* <CallToAction/> */}
         <Caterers/>
         <Categories/>
         <Partner/>

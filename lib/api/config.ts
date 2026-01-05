@@ -46,6 +46,11 @@ export async function apiRequest<T>(
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  } else {
+    // Log warning if no token is found for protected endpoints
+    if (endpoint.includes('/user/') || endpoint.includes('/caterer/') || endpoint.includes('/admin/')) {
+      console.warn(`⚠️ [API] No auth token found for protected endpoint: ${endpoint}`);
+    }
   }
 
   // Create abort controller for timeout

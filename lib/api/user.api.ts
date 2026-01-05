@@ -55,6 +55,7 @@ export interface Package {
   currency: string;
   rating?: number;
   is_available: boolean;
+  customisation_type?: 'FIXED' | 'CUSTOMISABLE' | 'CUSTOMIZABLE';
   items: any[];
   category_selections: any[];
   occasions: any[];
@@ -180,12 +181,14 @@ export const userApi = {
     min_price?: number;
     max_price?: number;
     occasion_id?: string;
+    occasion_name?: string;
     cuisine_type_id?: string;
     category_id?: string;
     package_type?: string;
     search?: string;
     menu_type?: 'fixed' | 'customizable';
     sort_by?: 'price_asc' | 'price_desc' | 'rating_desc' | 'created_desc';
+    created_by?: 'USER' | 'CATERER';
   }) => {
     const params = new URLSearchParams();
     if (filters) {
@@ -254,11 +257,11 @@ export const userApi = {
 
   /**
    * Get all cuisine types
-   * GET /api/caterer/metadata/cuisine-types
+   * GET /api/user/metadata/cuisine-types
    */
   getCuisineTypes: async () => {
     const response = await apiRequest<{ success: boolean; data: Array<{ id: string; name: string; description?: string | null }> }>(
-      '/api/caterer/metadata/cuisine-types',
+      '/api/user/metadata/cuisine-types',
       {
         method: 'GET',
       }
@@ -273,6 +276,20 @@ export const userApi = {
   getPackageTypes: async () => {
     const response = await apiRequest<{ success: boolean; data: Array<{ id: string; name: string; image_url?: string | null; description?: string | null; created_at: string; updated_at: string }>; count: number }>(
       '/api/user/packages/types',
+      {
+        method: 'GET',
+      }
+    );
+    return response;
+  },
+
+  /**
+   * Get all occasions
+   * GET /api/user/occasions
+   */
+  getOccasions: async () => {
+    const response = await apiRequest<{ success: boolean; data: Array<{ id: string; name: string; image_url?: string | null; description?: string | null; created_at: string; updated_at: string }>; count: number }>(
+      '/api/user/occasions',
       {
         method: 'GET',
       }
@@ -494,6 +511,57 @@ export const userApi = {
   getProposalById: async (proposalId: string) => {
     const response = await apiRequest<{ success: boolean; data: any }>(
       `/api/user/proposals/${proposalId}`,
+      {
+        method: 'GET',
+      }
+    );
+    return response;
+  },
+
+  /**
+   * Create a custom package
+   * POST /api/user/packages
+   */
+  createCustomPackage: async (data: {
+    name?: string;
+    dish_ids: string[];
+    people_count: number;
+    package_type_id?: string;
+    quantities?: { [dish_id: string]: number };
+  }) => {
+    const response = await apiRequest<{ success: boolean; data: Package }>(
+      '/api/user/packages',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+    return response;
+  },
+
+  /**
+   * Get packages created by the authenticated user
+   * GET /api/user/packages/my-packages
+   */
+  getMyPackages: async (filters?: {
+    search?: string;
+    min_price?: number;
+    max_price?: number;
+    min_guests?: number;
+    max_guests?: number;
+    sort_by?: 'price_asc' | 'price_desc' | 'rating_desc' | 'created_desc';
+  }) => {
+    const params = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, String(value));
+        }
+      });
+    }
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const response = await apiRequest<{ success: boolean; data: Package[]; count: number }>(
+      `/api/user/packages/my-packages${query}`,
       {
         method: 'GET',
       }
