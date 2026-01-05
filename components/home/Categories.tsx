@@ -21,6 +21,8 @@ const getCuisineImage = (cuisineName: string): string => {
     'Chinese': 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=600&fit=crop&q=80',
     'Italian': 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=800&h=600&fit=crop&q=80',
     'Mediterranean': 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&h=600&fit=crop&q=80',
+    'Asian Fusion': 'https://images.unsplash.com/photo-1559181567-c3190ca9959b?w=800&h=600&fit=crop&q=80',
+    'British': 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=800&h=600&fit=crop&q=80',
   };
   
   // Try exact match first
@@ -36,9 +38,8 @@ const getCuisineImage = (cuisineName: string): string => {
     }
   }
   
-  // Fallback: use keyword-based Unsplash search
-  const keyword = cuisineName.toLowerCase().replace(/\s+/g, '-') + '-food';
-  return `https://images.unsplash.com/featured?${encodeURIComponent(keyword)}&w=800&h=600&fit=crop&q=80`;
+  // Fallback: use a generic food image from Unsplash
+  return `https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=600&fit=crop&q=80`;
 };
 
 export default function TopCategoriesPage() {
