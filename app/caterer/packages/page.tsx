@@ -209,7 +209,7 @@ export default function PackagesPage() {
             <div className="bg-white rounded-lg shadow-sm p-12 text-center">
               <p className="text-gray-700 mb-4">No packages found. Create your first package to get started.</p>
               <Button onClick={() => router.push('/caterer/packages/create')} variant="primary">
-                Create Package
+                + Create a Package
               </Button>
             </div>
           ) : (
