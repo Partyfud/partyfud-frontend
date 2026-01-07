@@ -174,7 +174,10 @@ export default function AdminDashboard() {
                         </div>
                         <div className="bg-white rounded-xl p-4 shadow-sm border">
                             <p className="text-sm text-gray-500">Platform Revenue</p>
-                            <p className="text-2xl font-bold">AED {((stats?.platformRevenue || 0) / 1000).toFixed(0)}K</p>
+                            <p className="text-2xl font-bold flex items-center gap-1">
+                                <img src="/dirham.svg" alt="AED" className="w-5 h-5" />
+                                {((stats?.platformRevenue || 0) / 1000).toFixed(0)}K
+                            </p>
                             <p className="text-xs mt-1 text-green-600">Estimated</p>
                         </div>
                         <div className="bg-white rounded-xl p-4 shadow-sm border">
@@ -184,7 +187,10 @@ export default function AdminDashboard() {
                         </div>
                         <div className="bg-white rounded-xl p-4 shadow-sm border">
                             <p className="text-sm text-gray-500">Avg. Order Value</p>
-                            <p className="text-2xl font-bold">AED {stats?.avgOrderValue || '0'}</p>
+                            <p className="text-2xl font-bold flex items-center gap-1">
+                                <img src="/dirham.svg" alt="AED" className="w-5 h-5" />
+                                {stats?.avgOrderValue || '0'}
+                            </p>
                             <p className="text-xs mt-1 text-gray-600">Estimated</p>
                         </div>
                     </div>
@@ -263,7 +269,7 @@ export default function AdminDashboard() {
                                     ))}
                                     
                                     {/* Y-axis labels */}
-                                    <text x="5" y="25" fontSize="11" fill="#6b7280" fontWeight="500">AED</text>
+                                    <image x="5" y="17" width="16" height="16" href="/dirham.svg" />
                                     {stats?.ordersAndGMV && (() => {
                                         const maxValue = Math.max(...stats.ordersAndGMV.map(d => d.estimate));
                                         return [6, 5, 4, 3, 2, 1, 0].map((i) => (
@@ -402,14 +408,15 @@ export default function AdminDashboard() {
                                                     fill="white"
                                                     stroke="#e5e7eb"
                                                 />
+                                                <image x={currentPoint.x + 13} y={currentPoint.y - 9} width="14" height="14" href="/dirham.svg" />
                                                 <text
-                                                    x={currentPoint.x + 15}
+                                                    x={currentPoint.x + 30}
                                                     y={currentPoint.y + 2}
                                                     fontSize="11"
                                                     fill="#22c55e"
                                                     fontWeight="600"
                                                 >
-                                                    AED {(ordersAndGMV[currentMonthIndex].gmv).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    {(ordersAndGMV[currentMonthIndex].gmv).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </text>
                                                 
                                                 {/* Hover tooltip */}
@@ -446,16 +453,19 @@ export default function AdminDashboard() {
                                                         >
                                                             {hoveredPoint.month} - {hoveredPoint.type === 'orders' ? 'Orders' : 'Estimate'}
                                                         </text>
-                                                        <text
-                                                            x={hoveredPoint.x}
-                                                            y={hoveredPoint.y - 15}
-                                                            fontSize="11"
-                                                            fill="white"
-                                                            textAnchor="middle"
-                                                            fontWeight="bold"
-                                                        >
-                                                            AED {hoveredPoint.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                        </text>
+                                                        <g>
+                                                            <image x={hoveredPoint.x - 24} y={hoveredPoint.y - 23} width="14" height="14" href="/dirham.svg" />
+                                                            <text
+                                                                x={hoveredPoint.x - 6}
+                                                                y={hoveredPoint.y - 15}
+                                                                fontSize="11"
+                                                                fill="white"
+                                                                textAnchor="start"
+                                                                fontWeight="bold"
+                                                            >
+                                                                {hoveredPoint.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </text>
+                                                        </g>
                                                     </>
                                                 )}
                                             </>
@@ -672,7 +682,10 @@ export default function AdminDashboard() {
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-gray-600">Avg Order Value</span>
-                                    <span className="font-semibold text-green-600">AED {(stats?.avgOrderValue || 0).toFixed(2)}</span>
+                                    <span className="font-semibold text-green-600 flex items-center gap-1">
+                                        <img src="/dirham.svg" alt="AED" className="w-4 h-4" />
+                                        {(stats?.avgOrderValue || 0).toFixed(2)}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-gray-600">Active Caterers</span>
