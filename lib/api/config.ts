@@ -39,10 +39,12 @@ export async function apiRequest<T>(
 ): Promise<ApiResponse<T>> {
   const token = getAuthToken();
   
+  // Don't set Content-Type for FormData - browser will set it automatically with boundary
+  const isFormData = options.body instanceof FormData;
   const headers: Record<string, string> = {
-  'Content-Type': 'application/json',
-  ...(options.headers as Record<string, string>),
-};
+    ...(!isFormData && { 'Content-Type': 'application/json' }),
+    ...(options.headers as Record<string, string>),
+  };
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;

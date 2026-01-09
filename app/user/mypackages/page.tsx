@@ -180,7 +180,7 @@ export default function MyPackagesPage() {
                             catererId: (pkg as any).caterer?.id, // Get caterer ID for navigation to package detail page
                             price: pkg.total_price,
                             rating: pkg.rating || undefined,
-                            image: pkg.cover_image_url || '/default_dish.jpg',
+                            image: pkg.cover_image_url || '/logo_partyfud.svg',
                             customizable: pkg.items?.some((item: any) => item.is_optional) || pkg.category_selections?.length > 0 || false,
                             discount: undefined, // Can be added if discount logic exists
                             eventType: pkg.occasions?.[0]?.occasion?.name || 'All',
