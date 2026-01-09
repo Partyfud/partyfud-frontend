@@ -546,7 +546,9 @@ export default function PackageDetailsPage() {
                                 <h4 className="font-medium mb-2">Customizable Categories</h4>
                                 {pkg.category_selections.map((selection) => (
                                     <div key={selection.id} className="text-sm text-gray-600 mb-1">
-                                        {selection.category.name}: Select {selection.num_dishes_to_select} dish(es)
+                                        {selection.category.name}: {selection.num_dishes_to_select === null || selection.num_dishes_to_select === undefined 
+                                            ? 'Select all' 
+                                            : `Select ${selection.num_dishes_to_select} dish(es)`}
                                     </div>
                                 ))}
                             </div>

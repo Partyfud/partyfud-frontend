@@ -65,9 +65,15 @@ export interface Package {
   occasions?: Array<{ occassion?: { id: string; name: string }; id?: string; name?: string }>;
 }
 
+export interface CategorySelection {
+  category_id: string;
+  num_dishes_to_select: number | null; // null = select all, number = select exactly that many
+}
+
 export interface CreatePackageRequest {
   name: string;
   people_count: number;
+  package_type_id: string;
   cover_image_url?: string;
   total_price: number;
   currency?: string;
@@ -75,7 +81,9 @@ export interface CreatePackageRequest {
   occassion: string[];
   is_active?: boolean;
   is_available?: boolean;
+  customisation_type?: "FIXED" | "CUSTOMISABLE";
   package_item_ids?: string[];
+  category_selections?: CategorySelection[];
 }
 
 export interface UpdatePackageRequest {
@@ -293,6 +301,7 @@ export const catererApi = {
     // Add other fields
     formData.append('name', data.name);
     formData.append('people_count', data.people_count.toString());
+    formData.append('package_type_id', data.package_type_id);
     formData.append('total_price', data.total_price.toString());
     if (data.currency) {
       formData.append('currency', data.currency);
@@ -312,6 +321,14 @@ export const catererApi = {
     // Add package_item_ids as comma-separated string or array
     if (data.package_item_ids && data.package_item_ids.length > 0) {
       formData.append('package_item_ids', data.package_item_ids.join(','));
+    }
+    // Add customisation_type
+    if (data.customisation_type) {
+      formData.append('customisation_type', data.customisation_type);
+    }
+    // Add category_selections as JSON string
+    if (data.category_selections && data.category_selections.length > 0) {
+      formData.append('category_selections', JSON.stringify(data.category_selections));
     }
     
     const headers: HeadersInit = {};
@@ -374,6 +391,10 @@ export const catererApi = {
 
   getFreeForms: async () => {
     return apiRequest<Array<{ id: string; name: string; description?: string }>>('/api/caterer/metadata/freeforms');
+  },
+
+  getPackageTypes: async () => {
+    return apiRequest<Array<{ id: string; name: string; description?: string; image_url?: string }>>('/api/caterer/metadata/package-types');
   },
 
   // Package Items

@@ -116,6 +116,7 @@ export default function CreatePackagePage() {
   const [formData, setFormData] = useState<CreatePackageRequest>({
     name: '',
     people_count: 0,
+    package_type_id: '',
     cover_image_url: '',
     total_price: 0,
     currency: 'AED',
@@ -123,11 +124,15 @@ export default function CreatePackagePage() {
     occassion: [] as string[],
     is_active: true,
     is_available: true,
+    customisation_type: 'FIXED',
     package_item_ids: [],
+    category_selections: [],
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [occasions, setOccasions] = useState<Array<{ id: string; name: string }>>([]);  // Store categories with their items
+  const [occasions, setOccasions] = useState<Array<{ id: string; name: string }>>([]);
+  const [packageTypes, setPackageTypes] = useState<Array<{ id: string; name: string; description?: string | null }>>([]);
+  const [categories, setCategories] = useState<Array<{ id: string; name: string; description?: string | null }>>([]);
   const [packageItemsByCategory, setPackageItemsByCategory] = useState<Array<{
     category: { id: string; name: string; description?: string | null };
     items: Array<{ id: string; dish: { name: string; image_url?: string | null }; people_count: number; quantity: string }>;
@@ -151,6 +156,35 @@ export default function CreatePackagePage() {
           id: occ.id,
           name: occ.name,
         })));
+      }
+
+      // Fetch package types
+      try {
+        const packageTypesResponse = await catererApi.getPackageTypes();
+        if (packageTypesResponse.data) {
+          const packageTypesData = packageTypesResponse.data as any;
+          // Handle different response structures: { success: true, data: [...] } or direct array
+          if (packageTypesData.success && Array.isArray(packageTypesData.data)) {
+            setPackageTypes(packageTypesData.data);
+          } else if (packageTypesData.data && Array.isArray(packageTypesData.data)) {
+            setPackageTypes(packageTypesData.data);
+          } else if (Array.isArray(packageTypesData)) {
+            setPackageTypes(packageTypesData);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching package types:', error);
+      }
+
+      // Fetch categories
+      const categoriesResponse = await catererApi.getCategories();
+      if (categoriesResponse.data) {
+        const categoriesData = categoriesResponse.data as any;
+        if (categoriesData.data && Array.isArray(categoriesData.data)) {
+          setCategories(categoriesData.data);
+        } else if (Array.isArray(categoriesData)) {
+          setCategories(categoriesData);
+        }
       }
 
       // Fetch draft package items (items without package_id)
@@ -255,6 +289,35 @@ export default function CreatePackagePage() {
     }
   };
 
+  const handleCategorySelectionChange = (categoryId: string, numDishesToSelect: number | null) => {
+    const currentSelections = formData.category_selections || [];
+    const existingIndex = currentSelections.findIndex(cs => cs.category_id === categoryId);
+    
+    let newSelections: Array<{ category_id: string; num_dishes_to_select: number | null }>;
+    
+    if (numDishesToSelect === null && existingIndex >= 0) {
+      // Remove selection if setting to null
+      newSelections = currentSelections.filter(cs => cs.category_id !== categoryId);
+    } else if (existingIndex >= 0) {
+      // Update existing
+      newSelections = [...currentSelections];
+      newSelections[existingIndex] = { category_id: categoryId, num_dishes_to_select: numDishesToSelect };
+    } else {
+      // Add new
+      newSelections = [...currentSelections, { category_id: categoryId, num_dishes_to_select: numDishesToSelect }];
+    }
+    
+    setFormData({
+      ...formData,
+      category_selections: newSelections,
+    });
+  };
+
+  const getCategorySelectionLimit = (categoryId: string): number | null => {
+    const selection = formData.category_selections?.find(cs => cs.category_id === categoryId);
+    return selection?.num_dishes_to_select ?? null;
+  };
+
 
   const handleOpenCreateItemModal = () => {
     router.push(`/caterer/packages/create/add-items?people_count=${formData.people_count || 0}`);
@@ -271,6 +334,10 @@ export default function CreatePackagePage() {
     }
     if (!formData.people_count || formData.people_count <= 0) {
       setErrors({ people_count: 'People count must be greater than 0' });
+      return;
+    }
+    if (!formData.package_type_id) {
+      setErrors({ package_type_id: 'Package type is required' });
       return;
     }
     if (!formData.total_price || formData.total_price <= 0) {
@@ -343,10 +410,28 @@ export default function CreatePackagePage() {
                     onChange={(e) => {
                       const peopleCount = parseInt(e.target.value) || 0;
                       setFormData({ ...formData, people_count: peopleCount });
-                      setCreateItemFormData(prev => ({ ...prev, people_count: peopleCount }));
                     }}
                     placeholder="Enter number of people"
                     error={errors.people_count}
+                  />
+                </div>
+                <div>
+                  <Select
+                    label="Package Type"
+                    value={formData.package_type_id || ''}
+                    onChange={(e) => setFormData({ ...formData, package_type_id: e.target.value })}
+                    options={
+                      loadingMetadata 
+                        ? [{ value: '', label: 'Loading package types...' }]
+                        : packageTypes.length === 0
+                        ? [{ value: '', label: 'No package types available' }]
+                        : [
+                            { value: '', label: 'Select a package type' },
+                            ...packageTypes.map(pt => ({ value: pt.id, label: pt.name }))
+                          ]
+                    }
+                    error={errors.package_type_id}
+                    disabled={loadingMetadata || packageTypes.length === 0}
                   />
                 </div>
                 <div>
@@ -385,6 +470,49 @@ export default function CreatePackagePage() {
                     {errors.occassion && (
                       <p className="mt-1 text-sm text-red-600">{errors.occassion}</p>
                     )}
+                  </div>
+                  
+                  {/* Customisation Type Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Selection Type <span className="text-red-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <label className="flex items-center gap-2 cursor-pointer hover:bg-white p-3 rounded transition border-2 border-transparent hover:border-[#268700]">
+                        <input
+                          type="radio"
+                          name="customisation_type"
+                          value="FIXED"
+                          checked={formData.customisation_type === 'FIXED'}
+                          onChange={(e) => setFormData({ ...formData, customisation_type: 'FIXED' })}
+                          className="w-4 h-4 text-[#268700] border-gray-300 focus:ring-[#268700]"
+                        />
+                        <div>
+                          <span className="text-sm font-semibold text-gray-900">Fixed Package</span>
+                          <p className="text-xs text-gray-500 mt-0.5">Set limits on category selections</p>
+                        </div>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer hover:bg-white p-3 rounded transition border-2 border-transparent hover:border-[#268700]">
+                        <input
+                          type="radio"
+                          name="customisation_type"
+                          value="CUSTOMISABLE"
+                          checked={formData.customisation_type === 'CUSTOMISABLE'}
+                          onChange={(e) => {
+                            setFormData({ 
+                              ...formData, 
+                              customisation_type: 'CUSTOMISABLE',
+                              category_selections: [] // Clear category selections for CUSTOMISABLE
+                            });
+                          }}
+                          className="w-4 h-4 text-[#268700] border-gray-300 focus:ring-[#268700]"
+                        />
+                        <div>
+                          <span className="text-sm font-semibold text-gray-900">Customisable Package</span>
+                          <p className="text-xs text-gray-500 mt-0.5">Users can select any items</p>
+                        </div>
+                      </label>
+                    </div>
                   </div>
                   
                   {/* <Input
@@ -535,20 +663,53 @@ export default function CreatePackagePage() {
               </div>
             ) : (
               <div className="space-y-6">
-                {packageItemsByCategory.map((categoryGroup) => (
+                {packageItemsByCategory.map((categoryGroup) => {
+                  const currentLimit = getCategorySelectionLimit(categoryGroup.category.id);
+                  return (
                   <div key={categoryGroup.category.id} className="space-y-4">
                     {/* Category Header */}
-                    <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {categoryGroup.category.name}
-                      </h3>
-                      <span className="text-sm text-gray-500">
-                        ({Array.isArray(categoryGroup.items) ? categoryGroup.items.length : 0} {Array.isArray(categoryGroup.items) && categoryGroup.items.length === 1 ? 'item' : 'items'})
-                      </span>
-                      {categoryGroup.category.description && (
-                        <span className="text-sm text-gray-400 italic">
-                          - {categoryGroup.category.description}
+                    <div className="flex items-center justify-between pb-2 border-b border-gray-200">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {categoryGroup.category.name}
+                        </h3>
+                        <span className="text-sm text-gray-500">
+                          ({Array.isArray(categoryGroup.items) ? categoryGroup.items.length : 0} {Array.isArray(categoryGroup.items) && categoryGroup.items.length === 1 ? 'item' : 'items'})
                         </span>
+                        {categoryGroup.category.description && (
+                          <span className="text-sm text-gray-400 italic">
+                            - {categoryGroup.category.description}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Category Selection Limit Dropdown - Only for FIXED packages */}
+                      {formData.customisation_type === 'FIXED' && (
+                        <div className="flex items-center gap-2">
+                          <label className="text-sm text-gray-600 whitespace-nowrap">Select any:</label>
+                          <select
+                            value={currentLimit === null ? 'all' : currentLimit.toString()}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === 'all') {
+                                handleCategorySelectionChange(categoryGroup.category.id, null);
+                              } else {
+                                const num = parseInt(value, 10);
+                                if (!isNaN(num) && num > 0) {
+                                  handleCategorySelectionChange(categoryGroup.category.id, num);
+                                }
+                              }
+                            }}
+                            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#268700] focus:border-transparent bg-white text-gray-900 min-w-[100px]"
+                          >
+                            <option value="all">All</option>
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                              <option key={num} value={num.toString()}>
+                                {num}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       )}
                     </div>
                     
@@ -570,7 +731,8 @@ export default function CreatePackagePage() {
                       </div>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

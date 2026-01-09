@@ -9,21 +9,13 @@ import { Check } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 // import { Testimonials } from '@/user/Testimonials';
 
-interface Occasion {
-    id: string;
-    name: string;
-    description?: string | null;
-}
-
 export default function PackageDetailsPage() {
     const [eventType, setEventType] = useState('');
     const [location, setLocation] = useState('');
     const [guests, setGuests] = useState<number>(0);
     const [date, setDate] = useState('');
     const [pkg, setPkg] = useState<Package | null>(null);
-    const [occasions, setOccasions] = useState<Occasion[]>([]);
     const [loading, setLoading] = useState(true);
-    const [loadingTypes, setLoadingTypes] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [addingToCart, setAddingToCart] = useState(false);
     const [removingFromCart, setRemovingFromCart] = useState(false);
@@ -40,27 +32,34 @@ export default function PackageDetailsPage() {
     const packageId = params.packageId as string;
     const catererId = params.catererId as string;
 
-    // Fetch package types
+    // Read query params on mount
     useEffect(() => {
-        const fetchPackageTypes = async () => {
-            setLoadingTypes(true);
-            try {
-                const response = await userApi.getOccasions();
-                
-                if (response.error) {
-                    console.error('Failed to fetch occasions:', response.error);
-                } else if (response.data?.data) {
-                    setOccasions(response.data.data);
-                }
-            } catch (err) {
-                console.error('Error fetching occasions:', err);
-            } finally {
-                setLoadingTypes(false);
-            }
-        };
+        const searchParams = new URLSearchParams(window.location.search);
+        const guestsParam = searchParams.get('guests');
+        const eventTypeParam = searchParams.get('eventType');
+        const locationParam = searchParams.get('location');
+        const dateParam = searchParams.get('date');
 
-        fetchPackageTypes();
-    }, []);
+        if (guestsParam) {
+            setGuests(parseInt(guestsParam, 10));
+        } else if (pkg?.people_count) {
+            // Fallback to package's people_count if not provided
+            setGuests(pkg.people_count);
+        }
+        if (eventTypeParam) {
+            setEventType(eventTypeParam);
+        } else if (pkg?.package_type?.id) {
+            // Fallback to package's package_type_id if not provided in query params
+            setEventType(pkg.package_type.id);
+        }
+        if (locationParam) {
+            setLocation(locationParam);
+        }
+        if (dateParam) {
+            setDate(dateParam);
+        }
+    }, [pkg]);
+
 
     // Fetch package details
     useEffect(() => {
@@ -122,6 +121,49 @@ export default function PackageDetailsPage() {
         checkCartStatus();
     }, [packageId]);
 
+    // Validate category selections meet limits
+    const validateCategorySelections = (): { valid: boolean; message?: string } => {
+        if (!pkg?.category_selections || pkg.category_selections.length === 0) {
+            return { valid: true };
+        }
+
+        // Get categories that actually have items in the package
+        const categoriesWithItems = new Set<string>();
+        if (pkg.items) {
+            pkg.items.forEach((item: any) => {
+                const categoryName = item.dish?.category?.name || item.dish?.category;
+                if (categoryName) {
+                    categoriesWithItems.add(categoryName.trim().toLowerCase());
+                }
+            });
+        }
+
+        for (const selection of pkg.category_selections) {
+            const categoryName = selection.category.name;
+            const limit = selection.num_dishes_to_select;
+            
+            // Only validate categories that have items available in the package
+            const categoryNameNormalized = categoryName.trim().toLowerCase();
+            if (!categoriesWithItems.has(categoryNameNormalized)) {
+                // Skip validation for categories that don't have items in the package
+                continue;
+            }
+            
+            const selectedCount = getSelectedCountInCategory(categoryName);
+
+            if (limit !== null && limit !== undefined) {
+                if (selectedCount < limit) {
+                    return {
+                        valid: false,
+                        message: `Please select ${limit} ${limit === 1 ? 'item' : 'items'} from ${categoryName}. Currently selected: ${selectedCount}`
+                    };
+                }
+            }
+        }
+
+        return { valid: true };
+    };
+
     // Handle Add to Cart
     const handleAddToCart = async () => {
         // Check authentication first
@@ -139,9 +181,9 @@ export default function PackageDetailsPage() {
             return;
         }
 
-        // Validate required fields
-        if (!eventType) {
-            setCartMessage({ type: 'error', text: 'Please select an event type' });
+        // Validate required fields - package_type_id comes from the package itself
+        if (!pkg.package_type?.id) {
+            setCartMessage({ type: 'error', text: 'Package type information is missing. Please try again.' });
             return;
         }
 
@@ -160,6 +202,15 @@ export default function PackageDetailsPage() {
             return;
         }
 
+        // Validate category selections only for FIXED packages with category limits
+        if (pkg.customisation_type === 'FIXED' && pkg.category_selections && pkg.category_selections.length > 0) {
+            const validation = validateCategorySelections();
+            if (!validation.valid) {
+                setCartMessage({ type: 'error', text: validation.message || 'Please complete all category selections' });
+                return;
+            }
+        }
+
         setAddingToCart(true);
         setCartMessage(null);
 
@@ -176,9 +227,17 @@ export default function PackageDetailsPage() {
             const priceMultiplier = guests / pkg.people_count;
             const calculatedPrice = pkg.total_price * priceMultiplier;
 
+            // Use package's package_type_id (not eventType which is an occasion ID)
+            const packageTypeId = pkg.package_type?.id;
+            if (!packageTypeId) {
+                setCartMessage({ type: 'error', text: 'Package type information is missing. Please try again.' });
+                setAddingToCart(false);
+                return;
+            }
+
             const cartData = {
                 package_id: pkg.id,
-                package_type_id: eventType,
+                package_type_id: packageTypeId,
                 location: location,
                 guests: guests,
                 date: isoDate,
@@ -200,6 +259,8 @@ export default function PackageDetailsPage() {
                     errorMessage = 'Unable to add to cart. Please try logging in again.';
                 } else if (errorMessage.includes('already exists')) {
                     errorMessage = 'This package is already in your cart.';
+                } else if (errorMessage.includes('Package type not found') || errorMessage.includes('package type') || errorMessage.includes('package_type')) {
+                    errorMessage = 'Please select a valid event type. Please go back and select an event type.';
                 }
                 
                 setCartMessage({ type: 'error', text: errorMessage });
@@ -272,19 +333,93 @@ export default function PackageDetailsPage() {
         }
     }, [eventType, location, guests, date]);
 
-    // Check if package is customizable
-    const isCustomizable = pkg?.customisation_type === 'CUSTOMISABLE' || pkg?.customisation_type === 'CUSTOMIZABLE';
+    // Check if package is customizable (CUSTOMISABLE type allows unlimited selections)
+    const isCustomizable = pkg?.customisation_type === 'CUSTOMISABLE' || 
+                          pkg?.customisation_type === 'CUSTOMIZABLE';
+    
+    // Check if package is FIXED with category selections (has limits)
+    const isFixedWithLimits = pkg?.customisation_type === 'FIXED' && 
+                              pkg?.category_selections && 
+                              pkg.category_selections.length > 0;
 
-    // Toggle dish selection
-    const toggleDishSelection = (dishId: string) => {
-        if (!isCustomizable) return;
+    // Get category selection limit for a category (only for FIXED packages)
+    const getCategoryLimit = (categoryName: string): number | null => {
+        // Only apply limits for FIXED packages
+        if (!isFixedWithLimits || !pkg?.category_selections) return null;
+        const selection = pkg.category_selections.find(
+            (cs: any) => {
+                const selectionCategoryName = cs.category?.name || '';
+                // Normalize category names for comparison (trim and case-insensitive)
+                return selectionCategoryName.trim().toLowerCase() === categoryName.trim().toLowerCase();
+            }
+        );
+        return selection?.num_dishes_to_select ?? null;
+    };
+
+    // Get selected count for a category
+    const getSelectedCountInCategory = (categoryName: string): number => {
+        if (!pkg) return 0;
+        return Array.from(selectedDishIds).filter(id => {
+            const item = pkg.items.find((item: any) => item.dish?.id === id);
+            const itemCategoryName = item?.dish?.category?.name || item?.dish?.category;
+            // Normalize category names for comparison (trim and case-insensitive)
+            return itemCategoryName?.trim().toLowerCase() === categoryName.trim().toLowerCase();
+        }).length;
+    };
+
+    // Check if can select more in category
+    const canSelectInCategory = (categoryName: string): boolean => {
+        // For CUSTOMISABLE packages, always allow selection (no limits)
+        if (isCustomizable) return true;
+        
+        // For FIXED packages, check limits
+        const limit = getCategoryLimit(categoryName);
+        if (limit === null) return true; // No limit (select all)
+        const selectedCount = getSelectedCountInCategory(categoryName);
+        // Must be strictly less than limit to allow selection
+        return selectedCount < limit;
+    };
+
+    // Toggle dish selection with category limits
+    const toggleDishSelection = (dishId: string, categoryName: string) => {
+        // Allow selection for CUSTOMISABLE packages or FIXED packages with category selections
+        if ((!isCustomizable && !isFixedWithLimits) || !pkg) return;
         
         const newSelected = new Set(selectedDishIds);
-        if (newSelected.has(dishId)) {
+        const isCurrentlySelected = newSelected.has(dishId);
+        
+        if (isCurrentlySelected) {
+            // Deselecting - always allowed
             newSelected.delete(dishId);
         } else {
-            newSelected.add(dishId);
+            // For CUSTOMISABLE packages, no limits - allow unlimited selection
+            if (isCustomizable) {
+                newSelected.add(dishId);
+            } else {
+                // For FIXED packages, check category limit BEFORE adding
+                const limit = getCategoryLimit(categoryName);
+                
+                if (limit !== null) {
+                    // Calculate current count in this category (excluding the item we're about to add)
+                    const currentCount = getSelectedCountInCategory(categoryName);
+                    
+                    // Check if adding this item would exceed the limit
+                    if (currentCount >= limit) {
+                        // Limit reached - show message and prevent selection
+                        setCartMessage({ 
+                            type: 'error', 
+                            text: `You can only select ${limit} ${limit === 1 ? 'item' : 'items'} from ${categoryName}. Please deselect another item first.` 
+                        });
+                        setTimeout(() => setCartMessage(null), 3000);
+                        return; // Don't add the item
+                    }
+                }
+                
+                // Limit check passed (or no limit) - add the item
+                newSelected.add(dishId);
+            }
         }
+        
         setSelectedDishIds(newSelected);
     };
 
@@ -425,9 +560,40 @@ export default function PackageDetailsPage() {
     return (
         <>
         <section className="bg-[#FAFAFA] min-h-screen px-6 py-10">
-            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
+            <div className="max-w-7xl mx-auto">
 
-                {/* LEFT CONTENT */}
+                {/* Back Button */}
+                <button
+                    onClick={() => router.push(`/user/caterers/${catererId}`)}
+                    className="text-gray-600 hover:text-gray-900 mb-4 flex items-center gap-2"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Back to Packages
+                </button>
+
+                {/* Package Header */}
+                <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">{pkg.name}</h1>
+                    <p className="text-sm text-gray-500 mb-4">{pkg.package_type?.name || 'Package'}</p>
+                    <div className="flex items-center gap-6">
+                        {pkg.rating && (
+                            <div className="text-sm">
+                                ⭐ {pkg.rating}
+                            </div>
+                        )}
+                        <div className="font-semibold flex items-center gap-1">
+                            <img src="/dirham.svg" alt="AED" className="w-4 h-4" />
+                            {pkg.price_per_person.toLocaleString()}/Person
+                        </div>
+                        <div className="text-sm text-gray-500 flex items-center gap-1">
+                            Total: <img src="/dirham.svg" alt="AED" className="w-3 h-3" />{pkg.total_price.toLocaleString()} for {pkg.people_count} people
+                        </div>
+                    </div>
+                </div>
+
+                {/* MAIN CONTENT */}
                 <div>
                     {/* Image Gallery */}
                     <div className="grid grid-cols-4 gap-4 mb-6">
@@ -458,7 +624,7 @@ export default function PackageDetailsPage() {
                     {/* Menu Items */}
                     <div className="bg-white border border-gray-200 rounded-xl p-4">
                         <h3 className="font-medium mb-2">
-                            Menu Items {pkg.category_selections.length > 0 ? '(Customizable)' : '(Fixed)'}
+                            Menu Items {isCustomizable ? '(Customizable)' : isFixedWithLimits ? '(Fixed - Select Items)' : '(Fixed)'}
                         </h3>
 
                         <p className="text-sm text-gray-600 mb-4">
@@ -467,11 +633,28 @@ export default function PackageDetailsPage() {
 
                         {/* List grouped by category */}
                         <div className="space-y-0">
-                            {Object.entries(groupedItems).map(([category, items]: [string, any], categoryIndex) => (
+                            {Object.entries(groupedItems).map(([category, items]: [string, any], categoryIndex) => {
+                                const categoryLimit = getCategoryLimit(category);
+                                const selectedInCategory = getSelectedCountInCategory(category);
+                                const canSelectMore = canSelectInCategory(category);
+                                
+                                return (
                                 <div key={category} className="mb-0">
                                     {/* Category Header with light grey background */}
-                                    <div className="bg-gray-100 py-2 px-4 font-semibold text-gray-900">
-                                        {category}
+                                    <div className="bg-gray-100 py-2 px-4 font-semibold text-gray-900 flex items-center justify-between">
+                                        <span>{category}</span>
+                                        {/* Only show limits for FIXED packages with category selections */}
+                                        {isFixedWithLimits && categoryLimit !== null && (
+                                            <span className="text-sm font-normal text-gray-600">
+                                                {selectedInCategory} / {categoryLimit} selected
+                                            </span>
+                                        )}
+                                        {/* Show selection count for CUSTOMISABLE packages (no limits) */}
+                                        {isCustomizable && selectedInCategory > 0 && (
+                                            <span className="text-sm font-normal text-gray-600">
+                                                {selectedInCategory} selected
+                                            </span>
+                                        )}
                                     </div>
                                     
                                     {/* Dishes List */}
@@ -482,22 +665,43 @@ export default function PackageDetailsPage() {
                                             const hasValidDishId = dishId && dishId.trim() !== '';
                                             const isSelected = hasValidDishId ? isDishSelected(dishId) : false;
                                             
+                                            // For CUSTOMISABLE packages: no limits, always allow selection
+                                            // For FIXED packages: check limits
+                                            const categoryLimit = getCategoryLimit(category);
+                                            const selectedInThisCategory = getSelectedCountInCategory(category);
+                                            const isAtLimit = isFixedWithLimits && categoryLimit !== null && selectedInThisCategory >= categoryLimit && !isSelected;
+                                            const isDisabled = isFixedWithLimits && hasValidDishId && !isSelected && !canSelectMore;
+                                            
                                             return (
                                                 <div
                                                     key={item.id}
-                                                    onClick={() => hasValidDishId && toggleDishSelection(dishId)}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        if (hasValidDishId && !isDisabled && !isAtLimit) {
+                                                            toggleDishSelection(dishId, category);
+                                                        } else if (isAtLimit) {
+                                                            setCartMessage({ 
+                                                                type: 'error', 
+                                                                text: `You can only select ${categoryLimit} ${categoryLimit === 1 ? 'item' : 'items'} from ${category}` 
+                                                            });
+                                                            setTimeout(() => setCartMessage(null), 3000);
+                                                        }
+                                                    }}
                                                     className={`py-3 px-4 border-b border-gray-200 ${
                                                         itemIndex === items.length - 1 && categoryIndex !== Object.keys(groupedItems).length - 1
                                                             ? 'border-b-2 border-gray-300'
                                                             : ''
                                                     } ${
-                                                        isCustomizable && hasValidDishId
+                                                        (isCustomizable || isFixedWithLimits) && hasValidDishId && !isDisabled && !isAtLimit
                                                             ? 'cursor-pointer hover:bg-gray-50 transition-colors'
+                                                            : (isDisabled || isAtLimit)
+                                                            ? 'opacity-50 cursor-not-allowed'
                                                             : !hasValidDishId
                                                             ? 'opacity-60 cursor-not-allowed'
                                                             : ''
                                                     } ${
-                                                        isCustomizable && isSelected
+                                                        (isCustomizable || isFixedWithLimits) && isSelected
                                                             ? 'bg-green-50 border-l-4 border-l-[#268700]'
                                                             : ''
                                                     }`}
@@ -511,13 +715,20 @@ export default function PackageDetailsPage() {
                                                             {!hasValidDishId && (
                                                                 <span className="text-xs text-red-500 ml-2">(Not available)</span>
                                                             )}
+                                                            {(isDisabled || isAtLimit) && (
+                                                                <span className="text-xs text-orange-500 ml-2">(Limit reached)</span>
+                                                            )}
                                                         </span>
-                                                        {isCustomizable && hasValidDishId && (
+                                                        {(isCustomizable || isFixedWithLimits) && hasValidDishId && (
                                                             <div className="ml-4">
                                                                 {isSelected ? (
                                                                     <Check className="w-5 h-5 text-[#268700]" />
                                                                 ) : (
-                                                                    <div className="w-5 h-5 border-2 border-gray-300 rounded" />
+                                                                    <div className={`w-5 h-5 border-2 rounded ${
+                                                                        (isDisabled || isAtLimit)
+                                                                            ? 'border-gray-200 bg-gray-100' 
+                                                                            : 'border-gray-300'
+                                                                    }`} />
                                                                 )}
                                                             </div>
                                                         )}
@@ -527,23 +738,14 @@ export default function PackageDetailsPage() {
                                         })}
                                     </div>
                                 </div>
-                            ))}
+                            );
+                            })}
                         </div>
 
-                        {/* Category Selections (if customizable) */}
-                        {pkg.category_selections.length > 0 && (
-                            <div className="mt-6 pt-4 border-t border-gray-200">
-                                <h4 className="font-medium mb-2">Customizable Categories</h4>
-                                {pkg.category_selections.map((selection) => (
-                                    <div key={selection.id} className="text-sm text-gray-600 mb-1">
-                                        {selection.category.name}: Select {selection.num_dishes_to_select} dish(es)
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Create Package Button (only for customizable packages when dishes are selected) */}
-                        {isCustomizable && selectedDishIds.size > 0 && (
+                        {/* Create Package Button (only for CUSTOMISABLE packages, not FIXED with category selections) */}
+                        {isCustomizable && 
+                         pkg?.customisation_type === 'CUSTOMISABLE' && 
+                         selectedDishIds.size > 0 && (
                             <div className="mt-6 pt-4 border-t border-gray-200">
                                 {packageMessage && (
                                     <div className={`mb-4 p-3 rounded-lg text-sm ${
@@ -573,189 +775,89 @@ export default function PackageDetailsPage() {
                                 </p>
                             </div>
                         )}
+
+                        {/* Selection Summary for FIXED packages with category selections */}
+                        {isCustomizable && 
+                         pkg?.customisation_type === 'FIXED' && 
+                         pkg?.category_selections && 
+                         pkg.category_selections.length > 0 && 
+                         selectedDishIds.size > 0 && (
+                            <div className="mt-6 pt-4 border-t border-gray-200">
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                    <p className="text-sm font-medium text-blue-900 mb-2">
+                                        {selectedDishIds.size} {selectedDishIds.size === 1 ? 'item' : 'items'} selected
+                                    </p>
+                                    <p className="text-xs text-blue-700">
+                                        Complete your selections and click "Add to Cart" below to proceed.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Add to Cart Section - Fixed at bottom */}
+                    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4 z-50">
+                        <div className="max-w-7xl mx-auto flex justify-between items-center">
+                            <div>
+                                <p className="text-sm text-gray-600">Total Cost</p>
+                                <p className="text-2xl font-bold text-gray-900 flex items-center gap-1">
+                                    <img src="/dirham.svg" alt="AED" className="w-6 h-6" />
+                                    {guests > 0 && guests !== pkg.people_count 
+                                        ? (pkg.total_price * (guests / pkg.people_count)).toLocaleString(undefined, { maximumFractionDigits: 2 })
+                                        : pkg.total_price.toLocaleString()}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                    {guests > 0 ? guests : pkg.people_count} {guests === 1 ? 'person' : 'people'} × <img src="/dirham.svg" alt="AED" className="w-3 h-3 inline" />{pkg.price_per_person.toLocaleString()}/person
+                                </p>
+                                {/* Show selection status for FIXED packages with category selections */}
+                                {isCustomizable && 
+                                 pkg?.customisation_type === 'FIXED' && 
+                                 pkg?.category_selections && 
+                                 pkg.category_selections.length > 0 && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        {selectedDishIds.size} {selectedDishIds.size === 1 ? 'item' : 'items'} selected
+                                    </p>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-4">
+                                {cartMessage && (
+                                    <div className={`p-3 rounded-lg text-sm ${
+                                        cartMessage.type === 'success' 
+                                            ? 'bg-green-100 text-green-800 border border-green-300' 
+                                            : 'bg-red-100 text-red-800 border border-red-300'
+                                    }`}>
+                                        {cartMessage.text}
+                                    </div>
+                                )}
+                                <button 
+                                    onClick={isAddedToCart ? handleRemoveFromCart : handleAddToCart}
+                                    disabled={
+                                        (addingToCart || removingFromCart) || 
+                                        (!pkg) || 
+                                        (isAddedToCart ? false : (!eventType || !location || !guests || !date))
+                                    }
+                                    className={`px-8 py-3 rounded-full text-white font-medium transition-all ${
+                                        (addingToCart || removingFromCart) || !pkg
+                                            ? 'bg-gray-400 cursor-not-allowed'
+                                            : isAddedToCart
+                                            ? 'bg-green-800 hover:bg-green-900 cursor-pointer'
+                                            : (!eventType || !location || !guests || !date)
+                                            ? 'bg-gray-400 cursor-not-allowed'
+                                            : 'bg-[#268700] hover:bg-[#1f6b00] cursor-pointer'
+                                    }`}
+                                >
+                                    {removingFromCart 
+                                        ? 'Removing from Cart...' 
+                                        : addingToCart 
+                                        ? 'Adding to Cart...' 
+                                        : isAddedToCart 
+                                        ? 'Remove from Cart' 
+                                        : 'Add to Cart'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-                {/* RIGHT SIDEBAR */}
-                <aside className="bg-white border border-gray-200 rounded-xl p-5 h-fit">
-                    <button className="text-sm text-gray-600 mb-2">
-                        ← {pkg.name}
-                    </button>
-
-                    <h2 className="font-semibold text-lg">{pkg.name}</h2>
-                    <p className="text-sm text-gray-500">{pkg.package_type.name}</p>
-
-                    {pkg.rating && (
-                        <div className="text-sm mt-2">
-                            ⭐ {pkg.rating}
-                        </div>
-                    )}
-
-                    <p className="mt-2 font-semibold flex items-center gap-1">
-                        <img src="/dirham.svg" alt="AED" className="w-4 h-4" />
-                        {pkg.price_per_person.toLocaleString()}/Person
-                    </p>
-                    <p className="text-sm text-gray-500 flex items-center gap-1">
-                        Total: <img src="/dirham.svg" alt="AED" className="w-3 h-3" />{pkg.total_price.toLocaleString()} for {pkg.people_count} people
-                    </p>
-
-                    {/* Controls */}
-                    <div className="mt-4 space-y-3">
-                        {/* Event Type */}
-                        <div>
-                            <label className="block px-1 text-sm py-2">
-                                Event Type
-                            </label>
-                            <select
-                                name="eventType"
-                                value={eventType}
-                                onChange={(e) => setEventType(e.target.value)}
-                                className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#268700]"
-                                disabled={loadingTypes}
-                            >
-                                <option value="" className="text-black">
-                                    {loadingTypes ? 'Loading...' : 'Select Event Type'}
-                                </option>
-                                {occasions.map((occasion) => (
-                                    <option key={occasion.id} value={occasion.id} className="text-black">
-                                        {occasion.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block px-1 text-sm py-2">
-                                Location
-                            </label>
-                            <select
-                                name="location"
-                                value={location}
-                                onChange={(e) => setLocation(e.target.value)}
-                                className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#268700]"
-                            >
-                                <option value="" className="text-black">Select Location</option>
-                                <option value="Downtown Dubai" className="text-black">Downtown Dubai</option>
-                                <option value="Dubai Marina" className="text-black">Dubai Marina</option>
-                                <option value="Jumeirah" className="text-black">Jumeirah</option>
-                                <option value="Palm Jumeirah" className="text-black">Palm Jumeirah</option>
-                                <option value="Business Bay" className="text-black">Business Bay</option>
-                                <option value="Dubai International Financial Centre (DIFC)" className="text-black">Dubai International Financial Centre (DIFC)</option>
-                                <option value="Dubai Mall Area" className="text-black">Dubai Mall Area</option>
-                                <option value="Burj Al Arab Area" className="text-black">Burj Al Arab Area</option>
-                                <option value="Dubai Festival City" className="text-black">Dubai Festival City</option>
-                                <option value="Dubai Sports City" className="text-black">Dubai Sports City</option>
-                                <option value="Dubai Media City" className="text-black">Dubai Media City</option>
-                                <option value="Dubai Internet City" className="text-black">Dubai Internet City</option>
-                                <option value="Dubai Knowledge Park" className="text-black">Dubai Knowledge Park</option>
-                                <option value="Dubai Healthcare City" className="text-black">Dubai Healthcare City</option>
-                                <option value="Dubai World Trade Centre" className="text-black">Dubai World Trade Centre</option>
-                                <option value="Dubai Creek" className="text-black">Dubai Creek</option>
-                                <option value="Deira" className="text-black">Deira</option>
-                                <option value="Bur Dubai" className="text-black">Bur Dubai</option>
-                                <option value="Al Barsha" className="text-black">Al Barsha</option>
-                                <option value="Jumeirah Beach Residence (JBR)" className="text-black">Jumeirah Beach Residence (JBR)</option>
-                                <option value="Dubai Hills" className="text-black">Dubai Hills</option>
-                                <option value="Arabian Ranches" className="text-black">Arabian Ranches</option>
-                                <option value="Emirates Hills" className="text-black">Emirates Hills</option>
-                                <option value="Dubai Silicon Oasis" className="text-black">Dubai Silicon Oasis</option>
-                                <option value="Dubai Production City" className="text-black">Dubai Production City</option>
-                                <option value="Dubai Studio City" className="text-black">Dubai Studio City</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block px-1 text-sm py-2">
-                                Guests
-                            </label>
-                            <select
-                                name="guests"
-                                value={guests}
-                                onChange={(e) => setGuests(parseInt(e.target.value, 10))}
-                                className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#268700]"
-                                disabled={!pkg || !pkg.people_count}
-                            >
-                                {pkg && pkg.people_count ? (
-                                    Array.from({ length: 10 }, (_, i) => {
-                                        const guestCount = pkg.people_count * (i + 1);
-                                        return (
-                                            <option key={guestCount} value={guestCount} className="text-black">
-                                                {guestCount} {guestCount === 1 ? 'guest' : 'guests'}
-                                            </option>
-                                        );
-                                    })
-                                ) : (
-                                    <option value="0" className="text-black">Loading...</option>
-                                )}
-                            </select>
-                        </div>
-
-                        {/* Date */}
-                        <div>
-                            <label className="block text-sm text-gray-400 mb-2">
-                                Date
-                            </label>
-                            <input
-                                type="date"
-                                name="date"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                                className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 mb-4 focus:outline-none focus:border-[#268700]"
-                            />
-                        </div>
-
-                    </div>
-
-                    <div className="mt-4 font-semibold">
-                        Total Cost
-                        <div className="text-lg flex items-center gap-1">
-                            <img src="/dirham.svg" alt="AED" className="w-5 h-5" />
-                            {guests > 0 && guests !== pkg.people_count 
-                                ? (pkg.total_price * (guests / pkg.people_count)).toLocaleString(undefined, { maximumFractionDigits: 2 })
-                                : pkg.total_price.toLocaleString()}
-                        </div>
-                        <div className="text-sm text-gray-500 font-normal flex items-center gap-1">
-                            ({guests > 0 ? guests : pkg.people_count} {guests === 1 ? 'person' : 'people'} × <img src="/dirham.svg" alt="AED" className="w-3 h-3" />{pkg.price_per_person.toLocaleString()}/person)
-                        </div>
-                    </div>
-
-                    {/* Cart Message */}
-                    {cartMessage && (
-                        <div className={`mt-4 p-3 rounded-lg text-sm ${
-                            cartMessage.type === 'success' 
-                                ? 'bg-green-100 text-green-800 border border-green-300' 
-                                : 'bg-red-100 text-red-800 border border-red-300'
-                        }`}>
-                            {cartMessage.text}
-                        </div>
-                    )}
-
-                    <button 
-                        onClick={isAddedToCart ? handleRemoveFromCart : handleAddToCart}
-                        disabled={
-                            (addingToCart || removingFromCart) || 
-                            (!pkg) || 
-                            (isAddedToCart ? false : (!eventType || !location || !guests || !date))
-                        }
-                        className={`mt-4 w-full py-3 rounded-full text-white font-medium transition-all ${
-                            (addingToCart || removingFromCart) || !pkg
-                                ? 'bg-gray-400 cursor-not-allowed'
-                                : isAddedToCart
-                                ? 'bg-green-800 hover:bg-green-900 cursor-pointer'
-                                : (!eventType || !location || !guests || !date)
-                                ? 'bg-gray-400 cursor-not-allowed'
-                                : 'bg-green-600 hover:opacity-90 cursor-pointer'
-                        }`}
-                    >
-                        {removingFromCart 
-                            ? 'Removing from Cart...' 
-                            : addingToCart 
-                            ? 'Adding to Cart...' 
-                            : isAddedToCart 
-                            ? 'Remove from Cart' 
-                            : 'Add to Cart'}
-                    </button>
-                </aside>
             </div>
         </section>
         {/* <Testimonials/> */}
