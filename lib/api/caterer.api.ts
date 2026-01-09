@@ -260,10 +260,11 @@ export const catererApi = {
       // Add image file
       formData.append('image', imageFile);
       
+      // Don't set Content-Type - browser will set it with boundary for FormData
       return apiRequest<Dish>(`/api/caterer/dishes/${id}`, {
         method: 'PUT',
         body: formData,
-        isFormData: true,
+        headers: {}, // Override default Content-Type header for FormData
       });
     } else {
       // Regular JSON request without image
