@@ -275,7 +275,7 @@ export default function OrdersPage() {
                                             <div key={item.id} className="flex gap-4">
                                                 <div className="relative w-20 h-20 rounded-lg overflow-hidden shrink-0">
                                                     <Image
-                                                        src={item.package.cover_image_url || '/default_dish.jpg'}
+                                                        src={item.package.cover_image_url || '/logo_partyfud.svg'}
                                                         alt={item.package.name}
                                                         fill
                                                         className="object-cover"
@@ -392,7 +392,7 @@ export default function OrdersPage() {
                                             <div className="flex gap-4">
                                                 <div className="relative w-24 h-24 rounded-lg overflow-hidden shrink-0">
                                                     <Image
-                                                        src={item.package.cover_image_url || '/default_dish.jpg'}
+                                                        src={item.package.cover_image_url || '/logo_partyfud.svg'}
                                                         alt={item.package.name}
                                                         fill
                                                         className="object-cover"

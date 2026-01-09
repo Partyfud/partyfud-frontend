@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
+import { Modal } from '@/components/ui/Modal';
 import { catererApi, Package } from '@/lib/api/caterer.api';
 import { userApi } from '@/lib/api/user.api';
 
@@ -13,7 +14,7 @@ const PackageImage: React.FC<{ imageUrl: string | null; packageName: string }> =
   const [imageError, setImageError] = React.useState(false);
   const [fallbackError, setFallbackError] = React.useState(false);
 
-  const fallbackImage = '/default_dish.jpg';
+  const fallbackImage = '/logo_partyfud.svg';
 
   return (
     <div className="w-full h-56 bg-gray-100 flex items-center justify-center overflow-hidden relative">
@@ -25,12 +26,14 @@ const PackageImage: React.FC<{ imageUrl: string | null; packageName: string }> =
           onError={() => setImageError(true)}
         />
       ) : !fallbackError ? (
-        <img
-          src={fallbackImage}
-          alt={packageName}
-          className="w-full h-full object-cover"
-          onError={() => setFallbackError(true)}
-        />
+        <div className="w-full h-full bg-white flex items-center justify-center p-8">
+          <img
+            src={fallbackImage}
+            alt="PartyFud"
+            className="w-full h-full object-contain"
+            onError={() => setFallbackError(true)}
+          />
+        </div>
       ) : (
         <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 border-2 border-dashed border-amber-200">
           <div className="relative">
@@ -74,6 +77,7 @@ export default function PackagesPage() {
     { value: '', label: 'All Occasions' },
   ]);
   const [selectedOccasion, setSelectedOccasion] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPackages();
@@ -150,6 +154,15 @@ export default function PackagesPage() {
       setOccasions([
         { value: '', label: 'All Occasions' },
       ]);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    const response = await catererApi.deletePackage(id);
+
+    if (!response.error) {
+      setDeleteConfirm(null);
+      fetchPackages();
     }
   };
 
@@ -230,14 +243,25 @@ export default function PackagesPage() {
                       </div>
 
                       {/* Edit Button */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={() => router.push(`/caterer/packages/${pkg.id}/edit`)}
-                      >
-                        Edit Package
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 min-w-0 !border-2 !border-gray-900 !text-gray-900 hover:!bg-gray-100 hover:!border-gray-700 !focus:ring-gray-900 cursor-pointer"
+                          onClick={() => router.push(`/caterer/packages/${pkg.id}/edit`)}
+                        >
+                          Edit Package
+                        </Button>
+                        <button
+                          onClick={() => setDeleteConfirm(pkg.id)}
+                          className="p-2 bg-red-50 border-2 border-red-500 hover:bg-red-100 rounded-lg transition-colors shrink-0 w-10 h-10 flex items-center justify-center"
+                          aria-label="Delete package"
+                        >
+                          <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -246,6 +270,34 @@ export default function PackagesPage() {
           )}
         </div>
       </main>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        title="Confirm Delete"
+        size="sm"
+      >
+        <p className="text-gray-800 mb-6">
+          Are you sure you want to delete this package? This action cannot be undone.
+        </p>
+        <div className="flex gap-4">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => setDeleteConfirm(null)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            className="flex-1"
+            onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+          >
+            Delete
+          </Button>
+        </div>
+      </Modal>
     </>
   );
 }
