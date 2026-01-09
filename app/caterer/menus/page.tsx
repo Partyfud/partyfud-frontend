@@ -370,7 +370,7 @@ export default function MenusPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1 min-w-0 border-2 border-gray-900 text-gray-900 hover:bg-gray-50 hover:text-gray-900 focus:ring-gray-900 text-xs md:text-sm px-1 md:px-2"
+                        className="flex-1 min-w-0 !border-2 !border-gray-900 !text-gray-900 hover:!bg-gray-100 hover:!border-gray-700 !focus:ring-gray-900 cursor-pointer text-xs md:text-sm px-1 md:px-2"
                         onClick={() => handleEdit(dish)}
                       >
                         <span className="hidden sm:inline">Edit Item</span>

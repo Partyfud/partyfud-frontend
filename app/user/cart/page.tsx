@@ -215,7 +215,7 @@ export default function CartPage() {
                                         {/* Image */}
                                         <div className="relative w-full md:w-48 h-48 md:h-auto shrink-0">
                                             <Image
-                                                src={item.package.cover_image_url || '/default_dish.jpg'}
+                                                src={item.package.cover_image_url || '/logo_partyfud.svg'}
                                                 alt={item.package.name}
                                                 fill
                                                 className="object-cover"

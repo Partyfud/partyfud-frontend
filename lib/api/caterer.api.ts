@@ -89,12 +89,17 @@ export interface CreatePackageRequest {
 export interface UpdatePackageRequest {
   name?: string;
   people_count?: number;
+  package_type_id?: string;
   cover_image_url?: string;
   total_price?: number;
   currency?: string;
   rating?: number;
+  occassion?: string[];
   is_active?: boolean;
   is_available?: boolean;
+  customisation_type?: "FIXED" | "CUSTOMISABLE";
+  package_item_ids?: string[];
+  category_selections?: CategorySelection[];
 }
 
 // Dashboard Types
@@ -369,10 +374,84 @@ export const catererApi = {
     return { data: responseData.data || responseData };
   },
 
-  updatePackage: async (id: string, data: UpdatePackageRequest) => {
-    return apiRequest<Package>(`/api/caterer/packages/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
+  updatePackage: async (id: string, data: UpdatePackageRequest, imageFile?: File) => {
+    const token = getAuthToken();
+    const formData = new FormData();
+    
+    // Add image file if provided
+    if (imageFile) {
+      formData.append('image', imageFile);
+    }
+    
+    // Add other fields only if they are defined
+    if (data.name !== undefined) {
+      formData.append('name', data.name);
+    }
+    if (data.people_count !== undefined) {
+      formData.append('people_count', data.people_count.toString());
+    }
+    if (data.package_type_id !== undefined) {
+      formData.append('package_type_id', data.package_type_id);
+    }
+    if (data.total_price !== undefined) {
+      formData.append('total_price', data.total_price.toString());
+    }
+    if (data.currency !== undefined) {
+      formData.append('currency', data.currency);
+    }
+    if (data.occassion !== undefined) {
+      formData.append('occassion', JSON.stringify(data.occassion));
+    }
+    if (data.is_active !== undefined) {
+      formData.append('is_active', data.is_active.toString());
+    }
+    if (data.is_available !== undefined) {
+      formData.append('is_available', data.is_available.toString());
+    }
+    if (data.cover_image_url !== undefined) {
+      formData.append('cover_image_url', data.cover_image_url);
+    }
+    if (data.package_item_ids && data.package_item_ids.length > 0) {
+      formData.append('package_item_ids', data.package_item_ids.join(','));
+    }
+    if (data.customisation_type !== undefined) {
+      formData.append('customisation_type', data.customisation_type);
+    }
+    if (data.category_selections && data.category_selections.length > 0) {
+      formData.append('category_selections', JSON.stringify(data.category_selections));
+    }
+    
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/caterer/packages/${id}`, {
+        method: 'PUT',
+        headers,
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+      return { data: responseData.data || responseData };
+    } catch (error) {
+      let errorMessage = 'An error occurred while updating the package';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      return { error: errorMessage };
+    }
+  },
+
+  deletePackage: async (id: string) => {
+    return apiRequest<void>(`/api/caterer/packages/${id}`, {
+      method: 'DELETE',
     });
   },
 
