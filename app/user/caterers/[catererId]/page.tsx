@@ -515,6 +515,11 @@ function CatererMenuContent() {
 
                           <div className="pt-4 border-t border-gray-100">
                             <div className="font-bold text-gray-900 mb-1">AED {pkg.price_per_person}/person</div>
+                            {pkg.additional_info && (
+                              <p className="text-[10px] text-gray-500 mt-2 line-clamp-2 italic">
+                                {pkg.additional_info}
+                              </p>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -587,12 +592,12 @@ function CatererMenuContent() {
                         )}
 
                         {selectedPackage.additional_info && (
-                          <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                          <div className="mt-4 p-4 bg-gray-50/80 rounded-xl border border-dashed border-gray-200">
+                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                               <Info size={14} className="text-[#268700]" />
-                              Additional Information
+                              Caterer's Notes & Add-ons
                             </h4>
-                            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+                            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line italic">
                               {selectedPackage.additional_info}
                             </p>
                           </div>
