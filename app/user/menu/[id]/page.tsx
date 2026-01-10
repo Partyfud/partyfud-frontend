@@ -276,24 +276,24 @@ export default function DishDetailsPage() {
                 </div>
             </div>
 
-            {/* Sticky Bottom Bar - Exact UI from Screenshot */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] px-10 py-6 z-50">
-                <div className="max-w-[750px] mx-auto flex items-center justify-between">
+            {/* Sticky Bottom Bar - Refined Spacing & Proportions */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] px-10 py-5 z-50">
+                <div className="max-w-[1000px] mx-auto flex items-center justify-between gap-12">
                     <div className="flex flex-col">
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-2 leading-none">Starting Price</span>
                         <div className="flex items-center gap-2">
-                            <span className="text-base font-black text-gray-900 tracking-tight leading-none mb-1">AED</span>
-                            <span className="text-6xl font-black text-gray-900 leading-none tracking-tighter">{dish.price.toLocaleString()}</span>
-                            <span className="text-xs font-bold text-gray-400 ml-2 italic">/ person</span>
+                            <span className="text-sm font-black text-gray-900 tracking-tight leading-none mb-1">AED</span>
+                            <span className="text-4xl font-black text-gray-900 leading-none tracking-tighter">{dish.price.toLocaleString()}</span>
+                            <span className="text-[11px] font-bold text-gray-400 ml-2 italic">/ person</span>
                         </div>
                     </div>
 
                     <button
                         onClick={handleViewPackages}
-                        className="bg-[#2EB400] text-white px-12 py-5 rounded-2xl font-black text-sm uppercase tracking-[0.2em] hover:bg-[#268700] transition-all shadow-xl shadow-green-100 active:scale-95 flex items-center gap-6 group"
+                        className="bg-[#2EB400] text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-[#268700] transition-all shadow-lg shadow-green-100 active:scale-95 flex items-center gap-4 group"
                     >
                         View Menu Package
-                        <ChevronRight className="w-6 h-6 stroke-[3] transition-transform group-hover:translate-x-1" />
+                        <ChevronRight className="w-5 h-5 stroke-[3] transition-transform group-hover:translate-x-1" />
                     </button>
                 </div>
             </div>
