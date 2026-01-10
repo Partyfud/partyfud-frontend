@@ -109,9 +109,9 @@ export default function DishDetailsPage() {
     const currency = dish.currency || 'AED';
 
     return (
-        <section className="bg-[#FAFAFA] min-h-screen flex flex-col relative pb-32">
+        <section className="bg-[#FAFAFA] flex flex-col relative pb-2">
             {/* Header - Balanced */}
-            <div className="max-w-[1000px] w-full mx-auto px-6 pt-5 pb-1">
+            <div className="max-w-[1000px] w-full mx-auto px-6 pt-2 pb-1">
                 <button
                     onClick={() => router.back()}
                     className="flex items-center gap-2 text-gray-400 hover:text-gray-900 transition-colors group font-black text-[10px] uppercase tracking-[0.25em]"
@@ -122,7 +122,7 @@ export default function DishDetailsPage() {
             </div>
 
             {/* Main Content Area - Content Driven Height */}
-            <div className="px-6 py-2">
+            <div className="px-6 py-0">
                 <div className="max-w-[1000px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
 
                     {/* Left Column: Image and Menu Details (Significantly Narrower) */}
@@ -139,8 +139,8 @@ export default function DishDetailsPage() {
                             {/* Status Badge */}
                             <div className="absolute top-3 right-3">
                                 <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-2xl backdrop-blur-md ${dish.is_active
-                                        ? 'bg-[#268700]/95 text-white'
-                                        : 'bg-red-500/95 text-white'
+                                    ? 'bg-[#268700]/95 text-white'
+                                    : 'bg-red-500/95 text-white'
                                     }`}>
                                     {dish.is_active ? 'Available' : 'Unavailable'}
                                 </span>

@@ -15,13 +15,13 @@ export default function UserLayout({
   const router = useRouter();
   const pathname = usePathname();
 
-//   useEffect(() => {
-//     if (!loading) {
-//       if (!user || user.type !== 'USER') {
-//         router.replace('/login');
-//       }
-//     }
-//   }, [user, loading, router]);
+  //   useEffect(() => {
+  //     if (!loading) {
+  //       if (!user || user.type !== 'USER') {
+  //         router.replace('/login');
+  //       }
+  //     }
+  //   }, [user, loading, router]);
 
   if (loading) {
     return (
@@ -31,17 +31,17 @@ export default function UserLayout({
     );
   }
 
-//   if (!user || user.type !== 'USER') {
-//     return null;
-//   }
+  //   if (!user || user.type !== 'USER') {
+  //     return null;
+  //   }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
-      <main className="flex-1">
+      <main>
         {children}
       </main>
-      <Footer/>
+      <Footer />
     </div>
   );
 }

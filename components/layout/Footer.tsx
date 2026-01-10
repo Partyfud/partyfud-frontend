@@ -29,7 +29,7 @@ export const Footer: React.FC = () => {
       </div>
 
       {/* CTA Section */}
-      <div className="max-w-7xl mx-auto px-6 pt-16 pb-20">
+      <div className="max-w-7xl mx-auto px-6 pt-8 pb-12">
         <div className="flex flex-col lg:flex-row items-start justify-between gap-8">
           <div>
             <h2 className="text-3xl font-semibold mb-3">
@@ -41,7 +41,7 @@ export const Footer: React.FC = () => {
             </p>
           </div>
 
-          <button 
+          <button
             onClick={() => setIsPartnerFormOpen(true)}
             className="bg-[#1ee87a] text-black font-medium px-6 py-3 rounded-full hover:opacity-90 transition"
           >
@@ -94,7 +94,7 @@ export const Footer: React.FC = () => {
               </Link>
             </li>
             <li>
-              <button 
+              <button
                 onClick={() => setIsPartnerFormOpen(true)}
                 className="hover:text-white transition-colors text-left"
               >
@@ -163,25 +163,25 @@ export const Footer: React.FC = () => {
 
           {/* Social Icons */}
           <div className="flex gap-4 mt-6">
-            <a 
-              href="https://facebook.com/partyfud" 
-              target="_blank" 
+            <a
+              href="https://facebook.com/partyfud"
+              target="_blank"
               rel="noopener noreferrer"
               className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition hover:text-[#1ee87a]"
             >
               <Facebook size={18} />
             </a>
-            <a 
-              href="https://instagram.com/partyfud" 
-              target="_blank" 
+            <a
+              href="https://instagram.com/partyfud"
+              target="_blank"
               rel="noopener noreferrer"
               className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition hover:text-[#1ee87a]"
             >
               <Instagram size={18} />
             </a>
-            <a 
-              href="https://youtube.com/partyfud" 
-              target="_blank" 
+            <a
+              href="https://youtube.com/partyfud"
+              target="_blank"
               rel="noopener noreferrer"
               className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition hover:text-[#1ee87a]"
             >
@@ -206,9 +206,9 @@ export const Footer: React.FC = () => {
       </div>
 
       {/* Partner Form Modal */}
-      <PartnerForm 
-        isOpen={isPartnerFormOpen} 
-        onClose={() => setIsPartnerFormOpen(false)} 
+      <PartnerForm
+        isOpen={isPartnerFormOpen}
+        onClose={() => setIsPartnerFormOpen(false)}
       />
     </footer>
   );
