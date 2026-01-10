@@ -36,6 +36,8 @@ export default function PackagesPage() {
     const [cuisineTypeId, setCuisineTypeId] = useState<string>('');
     const [cuisineTypeName, setCuisineTypeName] = useState<string>('');
     const [selectedOccasions, setSelectedOccasions] = useState<string[]>([]);
+    const [dishId, setDishId] = useState<string>('');
+    const [dishName, setDishName] = useState<string>('');
 
     // Data states
     const [allPackages, setAllPackages] = useState<Package[]>([]); // Store all packages from API
@@ -52,9 +54,26 @@ export default function PackagesPage() {
             const occasionIdParam = params.get('occasion_id');
             const occasionNameParamValue = params.get('occasion_name');
             const cuisineTypeIdParam = params.get('cuisine_type_id');
+            const dishIdParam = params.get('dish_id');
 
             if (typeParam) {
                 setPackageType(decodeURIComponent(typeParam));
+            }
+
+            if (dishIdParam) {
+                setDishId(dishIdParam);
+                // Fetch dish name
+                const fetchDishName = async () => {
+                    try {
+                        const response = await userApi.getDishById(dishIdParam);
+                        if (response.data?.data) {
+                            setDishName(response.data.data.name);
+                        }
+                    } catch (err) {
+                        console.error('Error fetching dish name:', err);
+                    }
+                };
+                fetchDishName();
             }
 
             if (occasionIdParam) {
@@ -183,6 +202,10 @@ export default function PackagesPage() {
             filters.sort_by = sortBy;
         }
 
+        if (dishId) {
+            filters.dish_id = dishId;
+        }
+
         return filters;
     };
 
@@ -230,7 +253,7 @@ export default function PackagesPage() {
 
         return () => clearTimeout(timeoutId);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search, location, minGuests, maxGuests, minPrice, maxPrice, menuType, sortBy, packageType, occasionId, occasionNameParam, cuisineTypeId]); // Removed selectedOccasions
+    }, [search, location, minGuests, maxGuests, minPrice, maxPrice, menuType, sortBy, packageType, occasionId, occasionNameParam, cuisineTypeId, dishId]); // Removed selectedOccasions
 
     // Client-side filtering by selected occasions
     useEffect(() => {
@@ -259,12 +282,12 @@ export default function PackagesPage() {
         setPackageType('');
         setOccasionId('');
         setOccasionName('');
-        setOccasionNameParam('');
-        setCuisineTypeId('');
         setCuisineTypeName('');
         setSelectedOccasions([]);
+        setDishId('');
+        setDishName('');
         // Clear URL parameters
-        if (packageType || occasionId || occasionNameParam || cuisineTypeId) {
+        if (packageType || occasionId || occasionNameParam || cuisineTypeId || dishId) {
             window.history.replaceState({}, '', '/user/packages');
         }
     };
@@ -520,6 +543,30 @@ export default function PackagesPage() {
                                             setCuisineTypeName('');
                                             const params = new URLSearchParams(window.location.search);
                                             params.delete('cuisine_type_id');
+                                            const newUrl = params.toString()
+                                                ? `/user/packages?${params.toString()}`
+                                                : '/user/packages';
+                                            window.history.replaceState({}, '', newUrl);
+                                        }}
+                                        className="text-sm text-green-700 hover:text-green-900 underline"
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            )}
+                            {dishName && (
+                                <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-green-700 font-medium">
+                                            Packages including: <strong>{dishName}</strong>
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setDishId('');
+                                            setDishName('');
+                                            const params = new URLSearchParams(window.location.search);
+                                            params.delete('dish_id');
                                             const newUrl = params.toString()
                                                 ? `/user/packages?${params.toString()}`
                                                 : '/user/packages';

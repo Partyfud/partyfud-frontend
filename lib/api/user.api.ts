@@ -104,6 +104,15 @@ export interface Dish {
   updated_at: string;
 }
 
+export interface Occasion {
+  id: string;
+  name: string;
+  image_url?: string | null;
+  description?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // User API functions
 export const userApi = {
   /**
@@ -142,7 +151,7 @@ export const userApi = {
    * GET /api/user/packages?caterer_id=xxx
    */
   getPackagesByCatererId: async (catererId?: string) => {
-    const url = catererId 
+    const url = catererId
       ? `/api/user/packages?caterer_id=${catererId}`
       : '/api/user/packages';
     const response = await apiRequest<{ success: boolean; data: Package[]; count: number }>(
@@ -189,6 +198,7 @@ export const userApi = {
     menu_type?: 'fixed' | 'customizable';
     sort_by?: 'price_asc' | 'price_desc' | 'rating_desc' | 'created_desc';
     created_by?: 'USER' | 'CATERER';
+    dish_id?: string;
   }) => {
     const params = new URLSearchParams();
     if (filters) {
