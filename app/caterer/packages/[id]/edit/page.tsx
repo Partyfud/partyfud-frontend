@@ -23,8 +23,8 @@ const PackageItemCard: React.FC<PackageItemCardProps> = ({ item, isSelected, onT
   return (
     <label
       className={`block bg-white rounded-lg shadow overflow-hidden transition-all cursor-pointer ${isSelected
-          ? 'ring-2 ring-[#268700] ring-offset-2'
-          : 'hover:shadow-md'
+        ? 'ring-2 ring-[#268700] ring-offset-2'
+        : 'hover:shadow-md'
         }`}
     >
       {/* Image - Full width, fully visible */}
@@ -129,6 +129,7 @@ export default function EditPackagePage() {
     is_active: true,
     is_available: true,
     customisation_type: 'FIXED',
+    additional_info: '', // Extra pricing and services information
     package_item_ids: [],
     category_selections: [],
   });
@@ -160,17 +161,17 @@ export default function EditPackagePage() {
 
     // Handle both response structures: direct data or nested data
     const pkg = (response.data as any)?.data || response.data;
-    
+
     if (pkg && pkg.id) {
       console.log('✅ Package data received:', pkg);
       setPackageData(pkg);
-      
+
       // Extract occasion IDs from the package occasions array
       const occasionIds = pkg.occasions?.map((occ: any) => {
         // Handle both possible structures: { occassion: { id, name } } or { id, name }
         return occ.occassion?.id || occ.id;
       }).filter(Boolean) || [];
-      
+
       // Initialize form with current package data
       const initialFormData = {
         name: pkg.name || '',
@@ -183,12 +184,13 @@ export default function EditPackagePage() {
         is_active: pkg.is_active ?? true,
         is_available: pkg.is_available ?? true,
         customisation_type: pkg.customisation_type || 'FIXED',
+        additional_info: pkg.additional_info || '', // Extra pricing and services information
         package_item_ids: pkg.package_items?.map((item: any) => item.id) || [],
         category_selections: pkg.category_selections || [],
       };
       console.log('📝 Setting form data:', initialFormData);
       setFormData(initialFormData);
-      
+
       // Set image preview
       if (pkg.cover_image_url) {
         setImagePreview(pkg.cover_image_url);
@@ -258,38 +260,38 @@ export default function EditPackagePage() {
       // Fetch draft items (items without package_id) for editing package
       const itemsResponse = await (catererApi as any).getAllPackageItems(undefined, true);
       console.log('📦 [fetchPackageItems] API Response:', itemsResponse);
-      
+
       // Backend returns: { success: true, data: { categories: [...] } }
       // apiRequest wraps it: { data: { success: true, data: { categories: [...] } } }
       if (itemsResponse?.data) {
         const responseData = itemsResponse.data as any;
         console.log('📦 [fetchPackageItems] Response data:', responseData);
-        
+
         // Access the nested data structure - backend response has data.data.categories
         const categoriesData = responseData.data || responseData;
         console.log('📦 [fetchPackageItems] Categories data:', categoriesData);
-        
+
         // New API structure: { categories: [{ category: {...}, items: [...] }] }
         if (categoriesData?.categories && Array.isArray(categoriesData.categories)) {
           console.log('📦 [fetchPackageItems] Found categories:', categoriesData.categories.length);
-          
+
           // Ensure each category has items as an array and normalize item properties
           const normalizedCategories = categoriesData.categories.map((cat: any) => {
-            const items = Array.isArray(cat.items) 
+            const items = Array.isArray(cat.items)
               ? cat.items.map((item: any) => ({
-                  ...item,
-                  quantity: String(item.quantity || 1) // Convert quantity to string
-                }))
+                ...item,
+                quantity: String(item.quantity || 1) // Convert quantity to string
+              }))
               : [];
-            
+
             console.log(`📦 [fetchPackageItems] Category "${cat.category?.name || 'Unknown'}": ${items.length} items`);
-            
+
             return {
               category: cat.category || cat,
               items: items
             };
           });
-          
+
           console.log('📦 [fetchPackageItems] Setting normalized categories:', normalizedCategories.length);
           setPackageItemsByCategory(normalizedCategories);
         } else {
@@ -318,7 +320,7 @@ export default function EditPackagePage() {
 
   // Helper function to get all items from all categories (for selected items summary)
   const getAllItems = () => {
-    return packageItemsByCategory.flatMap(category => 
+    return packageItemsByCategory.flatMap(category =>
       Array.isArray(category.items) ? category.items : []
     );
   };
@@ -349,9 +351,9 @@ export default function EditPackagePage() {
   const handleCategorySelectionChange = (categoryId: string, numDishesToSelect: number | null) => {
     const currentSelections = formData.category_selections || [];
     const existingIndex = currentSelections.findIndex((cs: { category_id: string; num_dishes_to_select: number | null }) => cs.category_id === categoryId);
-    
+
     let newSelections: Array<{ category_id: string; num_dishes_to_select: number | null }>;
-    
+
     if (numDishesToSelect === null && existingIndex >= 0) {
       // Remove selection if setting to null
       newSelections = currentSelections.filter((cs: { category_id: string; num_dishes_to_select: number | null }) => cs.category_id !== categoryId);
@@ -363,7 +365,7 @@ export default function EditPackagePage() {
       // Add new
       newSelections = [...currentSelections, { category_id: categoryId, num_dishes_to_select: numDishesToSelect }];
     }
-    
+
     setFormData({
       ...formData,
       category_selections: newSelections,
@@ -408,13 +410,13 @@ export default function EditPackagePage() {
     if (response.error) {
       // Handle specific error cases with user-friendly messages
       let errorMessage = response.error;
-      
+
       if (errorMessage.includes('Foreign key') || errorMessage.includes('constraint')) {
         errorMessage = 'Unable to update package due to invalid data. Please check all fields.';
       } else if (errorMessage.includes('not found') || errorMessage.includes('permission')) {
         errorMessage = 'Package not found or you do not have permission to edit it.';
       }
-      
+
       setErrors({ general: errorMessage });
       window.scrollTo({ top: 0, behavior: 'smooth' });
       setIsSubmitting(false);
@@ -504,11 +506,11 @@ export default function EditPackagePage() {
                     value={formData.package_type_id || ''}
                     onChange={(e) => setFormData({ ...formData, package_type_id: e.target.value })}
                     options={
-                      loadingMetadata 
+                      loadingMetadata
                         ? [{ value: '', label: 'Loading package types...' }]
                         : packageTypes.length === 0
-                        ? [{ value: '', label: 'No package types available' }]
-                        : [
+                          ? [{ value: '', label: 'No package types available' }]
+                          : [
                             { value: '', label: 'Select a package type' },
                             ...packageTypes.map(pt => ({ value: pt.id, label: pt.name }))
                           ]
@@ -554,7 +556,7 @@ export default function EditPackagePage() {
                       <p className="mt-1 text-sm text-red-600">{errors.occassion}</p>
                     )}
                   </div>
-                  
+
                   {/* Customisation Type Selection */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -582,8 +584,8 @@ export default function EditPackagePage() {
                           value="CUSTOMISABLE"
                           checked={formData.customisation_type === 'CUSTOMISABLE'}
                           onChange={(e) => {
-                            setFormData({ 
-                              ...formData, 
+                            setFormData({
+                              ...formData,
                               customisation_type: 'CUSTOMISABLE',
                               category_selections: [] // Clear category selections for CUSTOMISABLE
                             });
@@ -597,7 +599,7 @@ export default function EditPackagePage() {
                       </label>
                     </div>
                   </div>
-                  
+
                   {/* <Input
                     label="Rating (Optional)"
                     type="number"
@@ -749,71 +751,71 @@ export default function EditPackagePage() {
                 {packageItemsByCategory.map((categoryGroup) => {
                   const currentLimit = getCategorySelectionLimit(categoryGroup.category.id);
                   return (
-                  <div key={categoryGroup.category.id} className="space-y-4">
-                    {/* Category Header */}
-                    <div className="flex items-center justify-between pb-2 border-b border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {categoryGroup.category.name}
-                        </h3>
-                        <span className="text-sm text-gray-500">
-                          ({Array.isArray(categoryGroup.items) ? categoryGroup.items.length : 0} {Array.isArray(categoryGroup.items) && categoryGroup.items.length === 1 ? 'item' : 'items'})
-                        </span>
-                        {categoryGroup.category.description && (
-                          <span className="text-sm text-gray-400 italic">
-                            - {categoryGroup.category.description}
+                    <div key={categoryGroup.category.id} className="space-y-4">
+                      {/* Category Header */}
+                      <div className="flex items-center justify-between pb-2 border-b border-gray-200">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {categoryGroup.category.name}
+                          </h3>
+                          <span className="text-sm text-gray-500">
+                            ({Array.isArray(categoryGroup.items) ? categoryGroup.items.length : 0} {Array.isArray(categoryGroup.items) && categoryGroup.items.length === 1 ? 'item' : 'items'})
                           </span>
+                          {categoryGroup.category.description && (
+                            <span className="text-sm text-gray-400 italic">
+                              - {categoryGroup.category.description}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Category Selection Limit Dropdown - Only for FIXED packages */}
+                        {formData.customisation_type === 'FIXED' && (
+                          <div className="flex items-center gap-2">
+                            <label className="text-sm text-gray-600 whitespace-nowrap">Select any:</label>
+                            <select
+                              value={currentLimit === null ? 'all' : currentLimit.toString()}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === 'all') {
+                                  handleCategorySelectionChange(categoryGroup.category.id, null);
+                                } else {
+                                  const num = parseInt(value, 10);
+                                  if (!isNaN(num) && num > 0) {
+                                    handleCategorySelectionChange(categoryGroup.category.id, num);
+                                  }
+                                }
+                              }}
+                              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#268700] focus:border-transparent bg-white text-gray-900 min-w-[100px]"
+                            >
+                              <option value="all">All</option>
+                              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                                <option key={num} value={num.toString()}>
+                                  {num}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         )}
                       </div>
-                      
-                      {/* Category Selection Limit Dropdown - Only for FIXED packages */}
-                      {formData.customisation_type === 'FIXED' && (
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm text-gray-600 whitespace-nowrap">Select any:</label>
-                          <select
-                            value={currentLimit === null ? 'all' : currentLimit.toString()}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (value === 'all') {
-                                handleCategorySelectionChange(categoryGroup.category.id, null);
-                              } else {
-                                const num = parseInt(value, 10);
-                                if (!isNaN(num) && num > 0) {
-                                  handleCategorySelectionChange(categoryGroup.category.id, num);
-                                }
-                              }
-                            }}
-                            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#268700] focus:border-transparent bg-white text-gray-900 min-w-[100px]"
-                          >
-                            <option value="all">All</option>
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                              <option key={num} value={num.toString()}>
-                                {num}
-                              </option>
-                            ))}
-                          </select>
+
+                      {/* Items Grid for this Category */}
+                      {!Array.isArray(categoryGroup.items) || categoryGroup.items.length === 0 ? (
+                        <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
+                          <p className="text-sm text-gray-400">No items in this category</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {categoryGroup.items.map((item) => (
+                            <PackageItemCard
+                              key={item.id}
+                              item={item}
+                              isSelected={formData.package_item_ids?.includes(item.id) || false}
+                              onToggle={() => handleItemToggle(item.id)}
+                            />
+                          ))}
                         </div>
                       )}
                     </div>
-                    
-                    {/* Items Grid for this Category */}
-                    {!Array.isArray(categoryGroup.items) || categoryGroup.items.length === 0 ? (
-                      <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
-                        <p className="text-sm text-gray-400">No items in this category</p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {categoryGroup.items.map((item) => (
-                          <PackageItemCard
-                            key={item.id}
-                            item={item}
-                            isSelected={formData.package_item_ids?.includes(item.id) || false}
-                            onToggle={() => handleItemToggle(item.id)}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
                   );
                 })}
               </div>
@@ -823,7 +825,7 @@ export default function EditPackagePage() {
           {/* Price Information */}
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-5">Pricing & Status</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Total Price
@@ -841,32 +843,23 @@ export default function EditPackagePage() {
                   />
                 </div>
               </div>
-              {/* <div className="flex items-center gap-6 pt-6">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="is_active"
-                    checked={formData.is_active ?? true}
-                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="w-4 h-4 text-[#268700] border-gray-300 rounded focus:ring-[#268700]"
-                  />
-                  <label htmlFor="is_active" className="text-sm font-medium text-gray-700 cursor-pointer">
-                    Active
-                  </label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="is_available"
-                    checked={formData.is_available ?? true}
-                    onChange={(e) => setFormData({ ...formData, is_available: e.target.checked })}
-                    className="w-4 h-4 text-[#268700] border-gray-300 rounded focus:ring-[#268700]"
-                  />
-                  <label htmlFor="is_available" className="text-sm font-medium text-gray-700 cursor-pointer">
-                    Available
-                  </label>
-                </div>
-              </div> */}
+
+              {/* Additional Information Textarea */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Additional Information
+                </label>
+                <textarea
+                  value={formData.additional_info || ''}
+                  onChange={(e) => setFormData({ ...formData, additional_info: e.target.value })}
+                  placeholder="For example: Crockery not included or per person crockery 20 AED, cleaning services extra charge of 10 AED per person etc"
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#268700] focus:border-transparent resize-none"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Enter extra pricing and services information for this package
+                </p>
+              </div>
             </div>
           </div>
 

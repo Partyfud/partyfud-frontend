@@ -82,6 +82,7 @@ export interface CreatePackageRequest {
   is_active?: boolean;
   is_available?: boolean;
   customisation_type?: "FIXED" | "CUSTOMISABLE";
+  additional_info?: string; // Extra pricing and services information
   package_item_ids?: string[];
   category_selections?: CategorySelection[];
 }
@@ -98,6 +99,7 @@ export interface UpdatePackageRequest {
   is_active?: boolean;
   is_available?: boolean;
   customisation_type?: "FIXED" | "CUSTOMISABLE";
+  additional_info?: string; // Extra pricing and services information
   package_item_ids?: string[];
   category_selections?: CategorySelection[];
 }
@@ -156,10 +158,10 @@ export const catererApi = {
     if (filters?.cuisine_type_id) params.append('cuisine_type_id', filters.cuisine_type_id);
     if (filters?.category_id) params.append('category_id', filters.category_id);
     if (filters?.group_by_category) params.append('group_by_category', 'true');
-    
+
     const queryString = params.toString();
     const endpoint = `/api/caterer/dishes${queryString ? `?${queryString}` : ''}`;
-    
+
     return apiRequest<any>(endpoint);
   },
 
@@ -170,12 +172,12 @@ export const catererApi = {
   createDish: async (data: CreateDishRequest, imageFile?: File) => {
     const token = getAuthToken();
     const formData = new FormData();
-    
+
     // Add image file if provided
     if (imageFile) {
       formData.append('image', imageFile);
     }
-    
+
     // Add other fields
     formData.append('name', data.name);
     formData.append('cuisine_type_id', data.cuisine_type_id);
@@ -205,19 +207,19 @@ export const catererApi = {
         formData.append('freeform_ids', id);
       });
     }
-    
+
     const headers: HeadersInit = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
     // Don't set Content-Type - browser will set it with boundary for FormData
-    
+
     const response = await fetch(`${API_BASE_URL}/api/caterer/dishes`, {
       method: 'POST',
       headers,
       body: formData,
     });
-    
+
     let responseData;
     try {
       responseData = await response.json();
@@ -227,7 +229,7 @@ export const catererApi = {
         error: text || `HTTP ${response.status}: ${response.statusText}`,
       };
     }
-    
+
     if (!response.ok) {
       let errorMessage = 'An error occurred';
       if (responseData?.error?.message) {
@@ -239,7 +241,7 @@ export const catererApi = {
       }
       return { error: errorMessage };
     }
-    
+
     return { data: responseData.data || responseData };
   },
 
@@ -247,24 +249,24 @@ export const catererApi = {
     if (imageFile) {
       // Use FormData for file upload
       const formData = new FormData();
-      
+
       // Add all dish data fields
       Object.entries(data).forEach(([key, value]) => {
         if (value !== undefined && value !== null && key !== 'freeform_ids') {
           formData.append(key, value.toString());
         }
       });
-      
+
       // Add freeform_ids as array
       if (data.freeform_ids && data.freeform_ids.length > 0) {
         data.freeform_ids.forEach((id) => {
           formData.append('freeform_ids', id);
         });
       }
-      
+
       // Add image file
       formData.append('image', imageFile);
-      
+
       // Don't set Content-Type - browser will set it with boundary for FormData
       return apiRequest<Dish>(`/api/caterer/dishes/${id}`, {
         method: 'PUT',
@@ -298,12 +300,12 @@ export const catererApi = {
   createPackage: async (data: CreatePackageRequest, imageFile?: File) => {
     const token = getAuthToken();
     const formData = new FormData();
-    
+
     // Add image file if provided
     if (imageFile) {
       formData.append('image', imageFile);
     }
-    
+
     // Add other fields
     formData.append('name', data.name);
     formData.append('people_count', data.people_count.toString());
@@ -336,19 +338,23 @@ export const catererApi = {
     if (data.category_selections && data.category_selections.length > 0) {
       formData.append('category_selections', JSON.stringify(data.category_selections));
     }
-    
+    // Add additional_info
+    if (data.additional_info) {
+      formData.append('additional_info', data.additional_info);
+    }
+
     const headers: HeadersInit = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
     // Don't set Content-Type - browser will set it with boundary for FormData
-    
+
     const response = await fetch(`${API_BASE_URL}/api/caterer/packages`, {
       method: 'POST',
       headers,
       body: formData,
     });
-    
+
     let responseData;
     try {
       responseData = await response.json();
@@ -358,7 +364,7 @@ export const catererApi = {
         error: text || `HTTP ${response.status}: ${response.statusText}`,
       };
     }
-    
+
     if (!response.ok) {
       let errorMessage = 'An error occurred';
       if (responseData?.error?.message) {
@@ -370,19 +376,19 @@ export const catererApi = {
       }
       return { error: errorMessage };
     }
-    
+
     return { data: responseData.data || responseData };
   },
 
   updatePackage: async (id: string, data: UpdatePackageRequest, imageFile?: File) => {
     const token = getAuthToken();
     const formData = new FormData();
-    
+
     // Add image file if provided
     if (imageFile) {
       formData.append('image', imageFile);
     }
-    
+
     // Add other fields only if they are defined
     if (data.name !== undefined) {
       formData.append('name', data.name);
@@ -420,7 +426,11 @@ export const catererApi = {
     if (data.category_selections && data.category_selections.length > 0) {
       formData.append('category_selections', JSON.stringify(data.category_selections));
     }
-    
+    // Add additional_info
+    if (data.additional_info !== undefined) {
+      formData.append('additional_info', data.additional_info);
+    }
+
     const headers: HeadersInit = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -765,7 +775,7 @@ export const catererApi = {
     });
 
     const responseData = await response.json();
-    
+
     if (!response.ok) {
       return {
         data: null,
@@ -779,4 +789,5 @@ export const catererApi = {
       error: null,
       status: response.status,
     };
-  },};
+  },
+};
