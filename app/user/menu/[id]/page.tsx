@@ -111,22 +111,22 @@ export default function DishDetailsPage() {
     return (
         <section className="bg-[#FAFAFA] min-h-screen flex flex-col relative pb-32">
             {/* Header - Simple & Spaced */}
-            <div className="max-w-[1000px] w-full mx-auto px-6 pt-12 pb-6">
+            <div className="max-w-[750px] w-full mx-auto px-6 pt-10 pb-4">
                 <button
                     onClick={() => router.back()}
-                    className="flex items-center gap-2 text-gray-400 hover:text-gray-900 transition-colors group font-black text-[10px] uppercase tracking-[0.2em]"
+                    className="flex items-center gap-2 text-gray-400 hover:text-gray-900 transition-colors group font-black text-[10px] uppercase tracking-[0.25em]"
                 >
                     <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
                     <span>Back to Menu</span>
                 </button>
             </div>
 
-            {/* Main Content Area - Wider Card like Caterer Page */}
-            <div className="max-w-[1000px] w-full mx-auto px-6 mb-12">
-                <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100/50 flex flex-col overflow-hidden">
+            {/* Main Content Area - Single Unified Card like Caterer Page */}
+            <div className="max-w-[750px] w-full mx-auto px-6 mb-10">
+                <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100/50 flex flex-col overflow-hidden">
 
-                    {/* 1. Hero Image Section - Reduced Height for better balance */}
-                    <div className="relative h-[400px] w-full">
+                    {/* 1. Hero Image Section */}
+                    <div className="relative h-[320px] w-full">
                         <Image
                             src={dish.image_url || '/default_dish.jpg'}
                             alt={dish.name}
@@ -134,18 +134,19 @@ export default function DishDetailsPage() {
                             className="object-cover"
                             priority
                         />
-                        <div className="absolute top-8 right-8">
-                            <span className="px-5 py-2 bg-[#2EB400] text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl">
-                                Available
+                        <div className="absolute top-6 right-6">
+                            <span className={`px-5 py-2 rounded-full text-[11px] font-black uppercase tracking-widest shadow-xl backdrop-blur-md ${dish.is_active ? 'bg-[#268700] text-white' : 'bg-red-500 text-white'
+                                }`}>
+                                {dish.is_active ? 'Available' : 'Unavailable'}
                             </span>
                         </div>
                     </div>
 
                     {/* 2. Content Sections Container */}
-                    <div className="p-10 flex flex-col gap-12">
+                    <div className="p-8 flex flex-col gap-10">
 
                         {/* Header Info Section */}
-                        <div className="flex flex-col gap-5">
+                        <div className="flex flex-col gap-4">
                             <div className="flex flex-wrap gap-3">
                                 <span className="px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-100">
                                     {dish.cuisine_type.name}
@@ -155,66 +156,68 @@ export default function DishDetailsPage() {
                                 </span>
                             </div>
 
-                            <div className="flex flex-col gap-3">
-                                <h1 className="text-5xl font-black text-gray-900 tracking-tight">
+                            <div className="flex flex-col gap-2">
+                                <h1 className="text-4xl font-black text-gray-900 leading-[0.9] tracking-tight">
                                     {dish.name}
                                 </h1>
                                 {dish.category.description && (
-                                    <p className="text-gray-400 text-base font-medium italic">
+                                    <p className="text-gray-400 text-sm font-medium italic">
                                         {dish.category.description}
                                     </p>
                                 )}
                             </div>
                         </div>
 
-                        {/* Metrics & Preview Row - 3 Balanced Boxes with more space */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="px-8 py-6 bg-white rounded-[2rem] border border-gray-100 shadow-[0_15px_40px_-20px_rgba(0,0,0,0.06)] text-center">
-                                <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-3">Pieces</p>
-                                <p className="text-3xl font-black text-gray-900 leading-none">{dish.pieces}</p>
+                        {/* Metrics & Preview Row - 3 Balanced Boxes */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="px-6 py-5 bg-white rounded-3xl border border-gray-100/80 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.05)] text-center">
+                                <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-2">Pieces</p>
+                                <p className="text-2xl font-black text-gray-900 leading-none">{dish.pieces}</p>
                             </div>
 
-                            <div className="px-8 py-6 bg-white rounded-[2rem] border border-gray-100 shadow-[0_15px_40px_-20px_rgba(0,0,0,0.06)] text-center">
-                                <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-3">Weight</p>
-                                <div className="flex items-baseline justify-center gap-2">
-                                    <p className="text-3xl font-black text-gray-900 leading-none">{dish.quantity_in_gm || '--'}</p>
-                                    <span className="text-sm font-black text-gray-300">g</span>
+                            <div className="px-6 py-5 bg-white rounded-3xl border border-gray-100/80 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.05)] text-center">
+                                <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-2">Weight</p>
+                                <div className="flex items-baseline justify-center gap-1.5">
+                                    <p className="text-2xl font-black text-gray-900 leading-none">{dish.quantity_in_gm || '--'}</p>
+                                    <span className="text-[11px] font-black text-gray-300 lowercase italic">g</span>
                                 </div>
                             </div>
 
                             {dish.caterer && (
                                 <div
                                     onClick={() => router.push(`/user/caterers/${dish.caterer?.id}`)}
-                                    className="px-8 py-6 bg-white rounded-[2rem] border border-gray-100 shadow-[0_15px_40px_-20px_rgba(0,0,0,0.06)] flex items-center justify-between group cursor-pointer hover:bg-gray-50 transition-all"
+                                    className="px-6 py-5 bg-white rounded-3xl border border-gray-100/80 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.05)] flex items-center justify-between group cursor-pointer hover:bg-gray-50 transition-all"
                                 >
-                                    <div className="flex items-center gap-5">
-                                        <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center shrink-0">
-                                            <MapPin className="w-6 h-6 text-[#268700]" />
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
+                                            <MapPin className="w-5 h-5 text-[#268700]" />
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1.5 leading-none">Caterer</p>
-                                            <p className="text-base font-black text-gray-900 truncate max-w-[100px]">{dish.caterer.name}</p>
+                                            <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1 leading-none">Caterer</p>
+                                            <p className="text-sm font-black text-gray-900 truncate max-w-[80px] leading-tight">{dish.caterer.name}</p>
                                         </div>
                                     </div>
-                                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#2EB400] transition-transform group-hover:translate-x-1" />
+                                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#268700] transition-transform group-hover:translate-x-1" />
                                 </div>
                             )}
                         </div>
 
                         {/* Event Details Section */}
-                        <div className="flex flex-col gap-8 pt-10 border-t border-gray-50">
-                            <h2 className="text-lg font-black text-gray-900 flex items-center gap-3 uppercase tracking-widest">
-                                <Calendar className="w-5 h-5 text-[#2EB400]" />
+                        <div className="flex flex-col gap-6 pt-6 border-t border-gray-50">
+                            <h2 className="text-base font-black text-gray-900 flex items-center gap-3 uppercase tracking-widest">
+                                <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+                                    <Calendar className="w-4 h-4 text-[#268700]" />
+                                </div>
                                 Event Details
                             </h2>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="flex flex-col gap-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="flex flex-col gap-2">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Event Type</label>
                                     <select
                                         value={selectedEventType}
                                         onChange={(e) => setSelectedEventType(e.target.value)}
-                                        className="w-full px-6 py-4.5 rounded-2xl bg-white border border-gray-100 shadow-sm text-sm font-black focus:outline-none focus:border-[#2EB400] transition-all appearance-none cursor-pointer"
+                                        className="w-full px-6 py-4 rounded-2xl bg-white border border-gray-100 shadow-sm text-sm font-black focus:outline-none focus:border-[#268700] transition-all appearance-none cursor-pointer"
                                     >
                                         <option value="">Select Event Type</option>
                                         {occasions.map((occ) => (
@@ -223,26 +226,26 @@ export default function DishDetailsPage() {
                                     </select>
                                 </div>
 
-                                <div className="flex flex-col gap-3">
+                                <div className="flex flex-col gap-2">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Location</label>
                                     <div className="relative">
                                         <MapPin className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
                                         <select
                                             value={selectedLocation}
                                             onChange={(e) => setSelectedLocation(e.target.value)}
-                                            className="w-full pl-14 pr-6 py-4.5 rounded-2xl bg-white border border-gray-100 shadow-sm text-sm font-black focus:outline-none focus:border-[#2EB400] transition-all appearance-none cursor-pointer"
+                                            className="w-full pl-14 pr-6 py-4 rounded-2xl bg-white border border-gray-100 shadow-sm text-sm font-black focus:outline-none focus:border-[#268700] transition-all appearance-none cursor-pointer"
                                         >
                                             <option value="">Select Location</option>
                                             <option value="Dubai Marina">Dubai Marina</option>
                                             <option value="Downtown">Downtown Dubai</option>
                                             <option value="JLT">JLT</option>
                                             <option value="Palm Jumeirah">Palm Jumeirah</option>
-                                            <option value="UAE Wide">All over UAE</option>
+                                            <option value="UAE Wide">UAE Wide</option>
                                         </select>
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col gap-3">
+                                <div className="flex flex-col gap-2">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Guests</label>
                                     <div className="relative">
                                         <Users className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
@@ -250,12 +253,12 @@ export default function DishDetailsPage() {
                                             type="number"
                                             value={guestCount}
                                             onChange={(e) => setGuestCount(parseInt(e.target.value))}
-                                            className="w-full pl-14 pr-6 py-4.5 rounded-2xl bg-white border border-gray-100 shadow-sm text-sm font-black focus:outline-none focus:border-[#2EB400] transition-all"
+                                            className="w-full pl-14 pr-6 py-4 rounded-2xl bg-white border border-gray-100 shadow-sm text-sm font-black focus:outline-none focus:border-[#268700] transition-all"
                                         />
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col gap-3">
+                                <div className="flex flex-col gap-2">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Date</label>
                                     <div className="relative">
                                         <Calendar className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
@@ -263,7 +266,7 @@ export default function DishDetailsPage() {
                                             type="date"
                                             value={eventDate}
                                             onChange={(e) => setEventDate(e.target.value)}
-                                            className="w-full pl-14 pr-6 py-4.5 rounded-2xl bg-white border border-gray-100 shadow-sm text-sm font-black focus:outline-none focus:border-[#2EB400] transition-all cursor-pointer"
+                                            className="w-full pl-14 pr-6 py-4 rounded-2xl bg-white border border-gray-100 shadow-sm text-sm font-black focus:outline-none focus:border-[#268700] transition-all cursor-pointer"
                                         />
                                     </div>
                                 </div>
