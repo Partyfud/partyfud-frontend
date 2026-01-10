@@ -56,6 +56,7 @@ export interface Package {
   rating?: number;
   is_available: boolean;
   customisation_type?: 'FIXED' | 'CUSTOMISABLE' | 'CUSTOMIZABLE';
+  additional_info?: string;
   items: any[];
   category_selections: any[];
   occasions: any[];

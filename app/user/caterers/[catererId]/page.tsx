@@ -585,6 +585,18 @@ function CatererMenuContent() {
                             })}
                           </div>
                         )}
+
+                        {selectedPackage.additional_info && (
+                          <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                              <Info size={14} className="text-[#268700]" />
+                              Additional Information
+                            </h4>
+                            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+                              {selectedPackage.additional_info}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
