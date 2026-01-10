@@ -34,12 +34,14 @@ export default function PackagesPage() {
     const [occasionNameParam, setOccasionNameParam] = useState<string>('');
     const [cuisineTypeId, setCuisineTypeId] = useState<string>('');
     const [cuisineTypeName, setCuisineTypeName] = useState<string>('');
-    
+    const [selectedOccasions, setSelectedOccasions] = useState<string[]>([]);
+
     // Data states
     const [packages, setPackages] = useState<Package[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    
+    const [occasions, setOccasions] = useState<Array<{ id: string; name: string }>>([]);
+
     // Read package_type, occasion_id, occasion_name, and cuisine_type_id from URL on mount
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -48,11 +50,11 @@ export default function PackagesPage() {
             const occasionIdParam = params.get('occasion_id');
             const occasionNameParamValue = params.get('occasion_name');
             const cuisineTypeIdParam = params.get('cuisine_type_id');
-            
+
             if (typeParam) {
                 setPackageType(decodeURIComponent(typeParam));
             }
-            
+
             if (occasionIdParam) {
                 setOccasionId(decodeURIComponent(occasionIdParam));
                 // Fetch occasion name for display
@@ -73,13 +75,13 @@ export default function PackagesPage() {
                 };
                 fetchOccasionName();
             }
-            
+
             if (occasionNameParamValue) {
                 const decodedName = decodeURIComponent(occasionNameParamValue);
                 setOccasionNameParam(decodedName);
                 setOccasionName(decodedName);
             }
-            
+
             if (cuisineTypeIdParam) {
                 setCuisineTypeId(decodeURIComponent(cuisineTypeIdParam));
                 // Fetch cuisine type name for display
@@ -87,8 +89,8 @@ export default function PackagesPage() {
                     try {
                         const response = await userApi.getCuisineTypes();
                         if (response.data) {
-                            const cuisineTypes = Array.isArray(response.data) 
-                                ? response.data 
+                            const cuisineTypes = Array.isArray(response.data)
+                                ? response.data
                                 : (response.data as any).data || [];
                             const cuisine = cuisineTypes.find(
                                 (ct: any) => ct.id === cuisineTypeIdParam
@@ -104,6 +106,24 @@ export default function PackagesPage() {
                 fetchCuisineTypeName();
             }
         }
+    }, []);
+
+    // Fetch occasions for filter
+    useEffect(() => {
+        const fetchOccasions = async () => {
+            try {
+                const response = await userApi.getOccasions();
+                if (response.data?.data) {
+                    setOccasions(response.data.data.map((occ: any) => ({
+                        id: occ.id,
+                        name: occ.name,
+                    })));
+                }
+            } catch (err) {
+                console.error('Error fetching occasions:', err);
+            }
+        };
+        fetchOccasions();
     }, []);
 
     // Build filters object for API
@@ -155,6 +175,11 @@ export default function PackagesPage() {
             filters.cuisine_type_id = cuisineTypeId;
         }
 
+        // Add selected occasions filter
+        if (selectedOccasions.length > 0) {
+            filters.occasion_ids = selectedOccasions;
+        }
+
         if (sortBy) {
             filters.sort_by = sortBy;
         }
@@ -204,7 +229,7 @@ export default function PackagesPage() {
 
         return () => clearTimeout(timeoutId);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search, location, minGuests, maxGuests, minPrice, maxPrice, menuType, sortBy, packageType, occasionId, occasionNameParam, cuisineTypeId]);
+    }, [search, location, minGuests, maxGuests, minPrice, maxPrice, menuType, sortBy, packageType, occasionId, occasionNameParam, cuisineTypeId, selectedOccasions]);
 
     const handleClearFilters = () => {
         setSearch('');
@@ -221,6 +246,7 @@ export default function PackagesPage() {
         setOccasionNameParam('');
         setCuisineTypeId('');
         setCuisineTypeName('');
+        setSelectedOccasions([]);
         // Clear URL parameters
         if (packageType || occasionId || occasionNameParam || cuisineTypeId) {
             window.history.replaceState({}, '', '/user/packages');
@@ -230,6 +256,53 @@ export default function PackagesPage() {
     return (
         <section className="bg-[#FAFAFA] min-h-screen">
             <h1 className='mt-5 ml-36 text-3xl font-semibold'>Browse from Packages</h1>
+
+            {/* Occasion Filters */}
+            {occasions.length > 0 && (
+                <div className="max-w-7xl mx-auto px-6 mt-6">
+                    <div className="bg-white border border-gray-200 rounded-xl p-6">
+                        <h3 className="text-sm font-medium text-gray-700 mb-4">
+                            Filter by Occasions <span className="text-gray-500 font-normal">(Select all that apply)</span>
+                        </h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                            {occasions.map((occasion) => (
+                                <label
+                                    key={occasion.id}
+                                    className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedOccasions.includes(occasion.id)}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setSelectedOccasions([...selectedOccasions, occasion.id]);
+                                            } else {
+                                                setSelectedOccasions(selectedOccasions.filter(id => id !== occasion.id));
+                                            }
+                                        }}
+                                        className="w-4 h-4 text-[#268700] border-gray-300 rounded focus:ring-[#268700]"
+                                    />
+                                    <span className="text-sm text-gray-700">{occasion.name}</span>
+                                </label>
+                            ))}
+                        </div>
+                        {selectedOccasions.length > 0 && (
+                            <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+                                <span className="text-sm text-gray-600">
+                                    {selectedOccasions.length} occasion{selectedOccasions.length !== 1 ? 's' : ''} selected
+                                </span>
+                                <button
+                                    onClick={() => setSelectedOccasions([])}
+                                    className="text-sm text-[#268700] hover:text-[#1f6b00] font-medium"
+                                >
+                                    Clear Selection
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
             <div className="max-w-7xl mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8">
 
                 {/* LEFT FILTERS */}
@@ -381,7 +454,7 @@ export default function PackagesPage() {
                                             setPackageType('');
                                             const params = new URLSearchParams(window.location.search);
                                             params.delete('package_type');
-                                            const newUrl = params.toString() 
+                                            const newUrl = params.toString()
                                                 ? `/user/packages?${params.toString()}`
                                                 : '/user/packages';
                                             window.history.replaceState({}, '', newUrl);
@@ -407,7 +480,7 @@ export default function PackagesPage() {
                                             const params = new URLSearchParams(window.location.search);
                                             params.delete('occasion_id');
                                             params.delete('occasion_name');
-                                            const newUrl = params.toString() 
+                                            const newUrl = params.toString()
                                                 ? `/user/packages?${params.toString()}`
                                                 : '/user/packages';
                                             window.history.replaceState({}, '', newUrl);
@@ -431,7 +504,7 @@ export default function PackagesPage() {
                                             setCuisineTypeName('');
                                             const params = new URLSearchParams(window.location.search);
                                             params.delete('cuisine_type_id');
-                                            const newUrl = params.toString() 
+                                            const newUrl = params.toString()
                                                 ? `/user/packages?${params.toString()}`
                                                 : '/user/packages';
                                             window.history.replaceState({}, '', newUrl);
