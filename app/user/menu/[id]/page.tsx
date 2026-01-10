@@ -114,7 +114,7 @@ export default function DishDetailsPage() {
                             </div>
                         </div>
 
-                        {/* RIGHT: Content Section */}
+                        {/* RIGHT: Content Section   */}
                         <div className="p-8 lg:p-12 flex flex-col justify-between">
                             <div>
                                 {/* Title */}
