@@ -16,6 +16,7 @@ interface Package {
     customizable?: boolean;
     discount?: string;
     eventType: string;
+    occasionIds?: string[]; // Add occasion IDs for filtering
 }
 
 export default function PackagesPage() {
@@ -37,7 +38,8 @@ export default function PackagesPage() {
     const [selectedOccasions, setSelectedOccasions] = useState<string[]>([]);
 
     // Data states
-    const [packages, setPackages] = useState<Package[]>([]);
+    const [allPackages, setAllPackages] = useState<Package[]>([]); // Store all packages from API
+    const [packages, setPackages] = useState<Package[]>([]); // Filtered packages to display
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [occasions, setOccasions] = useState<Array<{ id: string; name: string }>>([]);
@@ -175,10 +177,7 @@ export default function PackagesPage() {
             filters.cuisine_type_id = cuisineTypeId;
         }
 
-        // Add selected occasions filter
-        if (selectedOccasions.length > 0) {
-            filters.occasion_ids = selectedOccasions;
-        }
+        // Don't send occasion_ids to API - we'll filter client-side
 
         if (sortBy) {
             filters.sort_by = sortBy;
@@ -210,8 +209,10 @@ export default function PackagesPage() {
                             customizable: pkg.customisation_type === 'CUSTOMISABLE' || pkg.customisation_type === 'CUSTOMIZABLE',
                             discount: undefined, // Can be added if discount logic exists
                             eventType: pkg.occasions?.[0]?.occasion?.name || 'All',
+                            occasionIds: pkg.occasions?.map((occ: any) => occ.occasion?.id).filter(Boolean) || [], // Store all occasion IDs
                         }));
-                    setPackages(mappedPackages);
+                    setAllPackages(mappedPackages); // Store all packages
+                    setPackages(mappedPackages); // Initially show all
                 }
             } catch (err: any) {
                 console.error('Error fetching packages:', err);
@@ -229,7 +230,22 @@ export default function PackagesPage() {
 
         return () => clearTimeout(timeoutId);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search, location, minGuests, maxGuests, minPrice, maxPrice, menuType, sortBy, packageType, occasionId, occasionNameParam, cuisineTypeId, selectedOccasions]);
+    }, [search, location, minGuests, maxGuests, minPrice, maxPrice, menuType, sortBy, packageType, occasionId, occasionNameParam, cuisineTypeId]); // Removed selectedOccasions
+
+    // Client-side filtering by selected occasions
+    useEffect(() => {
+        if (selectedOccasions.length === 0) {
+            // No occasion filter - show all packages
+            setPackages(allPackages);
+        } else {
+            // Filter packages that have at least one of the selected occasions
+            const filtered = allPackages.filter(pkg => {
+                const pkgOccasionIds = (pkg as any).occasionIds || [];
+                return selectedOccasions.some(selectedId => pkgOccasionIds.includes(selectedId));
+            });
+            setPackages(filtered);
+        }
+    }, [selectedOccasions, allPackages]);
 
     const handleClearFilters = () => {
         setSearch('');
