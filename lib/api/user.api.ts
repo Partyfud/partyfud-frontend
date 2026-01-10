@@ -313,6 +313,7 @@ export const userApi = {
    */
   createCartItem: async (data: {
     package_id: string;
+    package_type_id?: string;
     location?: string;
     guests?: number;
     date?: string;

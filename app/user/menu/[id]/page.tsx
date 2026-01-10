@@ -109,26 +109,26 @@ export default function DishDetailsPage() {
     const currency = dish.currency || 'AED';
 
     return (
-        <section className="bg-[#FAFAFA] h-screen flex flex-col overflow-hidden">
-            {/* Header - Compact */}
-            <div className="max-w-[1000px] w-full mx-auto px-4 pt-3 pb-1">
+        <section className="bg-[#FAFAFA] min-h-screen flex flex-col relative pb-32">
+            {/* Header - Balanced */}
+            <div className="max-w-[1000px] w-full mx-auto px-6 pt-5 pb-1">
                 <button
                     onClick={() => router.back()}
-                    className="flex items-center gap-2 text-gray-400 hover:text-gray-900 transition-colors group font-black text-[8px] uppercase tracking-[0.2em]"
+                    className="flex items-center gap-2 text-gray-400 hover:text-gray-900 transition-colors group font-black text-[10px] uppercase tracking-[0.25em]"
                 >
-                    <ChevronLeft className="w-3 h-3 transform group-hover:-translate-x-1 transition-transform" />
+                    <ChevronLeft className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
                     <span>Back to Menu</span>
                 </button>
             </div>
 
-            {/* Main Content Area - Ultra tight */}
-            <div className="flex-1 overflow-hidden px-4 pb-20">
-                <div className="max-w-[1000px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-4 h-full items-stretch">
+            {/* Main Content Area - Content Driven Height */}
+            <div className="px-6 py-2">
+                <div className="max-w-[1000px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
 
-                    {/* Left Column: Image and Menu Details */}
-                    <div className="lg:col-span-7 flex flex-col gap-3">
-                        {/* Image Section - Compact */}
-                        <div className="relative h-[200px] w-full bg-white rounded-2xl overflow-hidden shadow-sm border border-white/50 shrink-0">
+                    {/* Left Column: Image and Menu Details (Significantly Narrower) */}
+                    <div className="lg:col-span-5 flex flex-col gap-4">
+                        {/* Image Section - Balanced height */}
+                        <div className="relative h-[200px] w-full bg-white rounded-[1.5rem] overflow-hidden shadow-md border border-white/50 shrink-0">
                             <Image
                                 src={dish.image_url || '/default_dish.jpg'}
                                 alt={dish.name}
@@ -137,89 +137,90 @@ export default function DishDetailsPage() {
                                 priority
                             />
                             {/* Status Badge */}
-                            <div className="absolute top-2 right-2">
-                                <span className={`px-2 py-1 rounded-full text-[7px] font-black uppercase tracking-widest shadow-xl backdrop-blur-md ${dish.is_active
-                                    ? 'bg-[#268700]/90 text-white'
-                                    : 'bg-red-500/90 text-white'
+                            <div className="absolute top-3 right-3">
+                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-2xl backdrop-blur-md ${dish.is_active
+                                        ? 'bg-[#268700]/95 text-white'
+                                        : 'bg-red-500/95 text-white'
                                     }`}>
                                     {dish.is_active ? 'Available' : 'Unavailable'}
                                 </span>
                             </div>
                         </div>
 
-                        {/* Menu Details Card - Compressed */}
-                        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex-1 flex flex-col justify-between">
-                            <div className="mb-2">
-                                <h1 className="text-lg sm:text-xl font-black text-gray-900 mb-0.5 leading-tight tracking-tight">
+                        {/* Menu Details Card - Compact & Clean */}
+                        <div className="bg-white rounded-[1.5rem] p-6 shadow-sm border border-gray-100 flex flex-col gap-5">
+                            <div>
+                                <h1 className="text-2xl font-black text-gray-900 mb-2 leading-tight tracking-tight">
                                     {dish.name}
                                 </h1>
 
-                                <div className="flex flex-wrap gap-1 mb-1.5 text-[7px]">
-                                    <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full font-black uppercase tracking-wider border border-blue-100">
+                                <div className="flex flex-wrap gap-2 text-[9px] mb-3">
+                                    <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full font-black uppercase tracking-widest border border-blue-100">
                                         {dish.cuisine_type.name}
                                     </span>
-                                    <span className="px-2 py-0.5 bg-green-50 text-green-600 rounded-full font-black uppercase tracking-wider border border-green-100">
+                                    <span className="px-3 py-1 bg-green-50 text-green-600 rounded-full font-black uppercase tracking-widest border border-green-100">
                                         {dish.category.name}
                                     </span>
                                 </div>
 
                                 {dish.category.description && (
-                                    <p className="text-gray-400 text-[10px] leading-snug italic line-clamp-1">
+                                    <p className="text-gray-400 text-xs leading-relaxed italic font-medium">
                                         "{dish.category.description}"
                                     </p>
                                 )}
                             </div>
 
-                            {/* Details Grid - Tiny */}
-                            <div className="grid grid-cols-2 gap-2 mb-2">
-                                <div className="p-2 bg-gray-50/50 rounded-lg border border-gray-100">
-                                    <p className="text-[6px] font-black text-gray-400 uppercase tracking-[0.2em]">Pieces</p>
-                                    <p className="text-base font-black text-gray-900">{dish.pieces}</p>
+                            {/* Details Grid - Balanced Metrics */}
+                            <div className="flex flex-wrap gap-2.5">
+                                <div className="min-w-[75px] px-2.5 py-2.5 bg-gray-50/50 rounded-xl border border-gray-100 text-center">
+                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-[0.1em] mb-1">Pieces</p>
+                                    <p className="text-2xl font-black text-gray-900 leading-none tracking-tighter">{dish.pieces}</p>
                                 </div>
                                 {dish.quantity_in_gm && (
-                                    <div className="p-2 bg-gray-50/50 rounded-lg border border-gray-100">
-                                        <p className="text-[6px] font-black text-gray-400 uppercase tracking-[0.2em]">Weight</p>
-                                        <div className="flex items-baseline gap-0.5">
-                                            <p className="text-base font-black text-gray-900">{dish.quantity_in_gm}</p>
-                                            <span className="text-[8px] font-bold text-gray-400">g</span>
+                                    <div className="min-w-[90px] px-3 py-2.5 bg-gray-50/50 rounded-xl border border-gray-100 text-center">
+                                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-[0.1em] mb-1">Weight</p>
+                                        <div className="flex items-baseline justify-center gap-0.5">
+                                            <p className="text-2xl font-black text-gray-900 leading-none tracking-tighter">{dish.quantity_in_gm}</p>
+                                            <span className="text-[9px] font-black text-gray-400 uppercase">g</span>
                                         </div>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Caterer Info - Minimal */}
+                            {/* Caterer Info - Compact Section */}
                             {dish.caterer && (
-                                <div className="p-2 bg-white rounded-lg border border-gray-100 flex items-center justify-between group cursor-pointer hover:bg-gray-50 transition-colors"
+                                <div className="p-3 bg-white rounded-xl border border-gray-100 flex items-center justify-between group cursor-pointer hover:bg-gray-50 transition-all shadow-sm"
                                     onClick={() => router.push(`/user/caterers/${dish.caterer?.id}`)}>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-7 h-7 rounded bg-green-50 flex items-center justify-center shrink-0">
-                                            <MapPin className="w-3 h-3 text-[#268700]" />
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
+                                            <MapPin className="w-4 h-4 text-[#268700]" />
                                         </div>
                                         <div>
-                                            <p className="text-[6px] font-black text-gray-400 uppercase tracking-[0.1em]">By {dish.caterer.name}</p>
+                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.1em] leading-none mb-1">Prepared by</p>
+                                            <p className="text-sm font-black text-gray-900">{dish.caterer.name}</p>
                                         </div>
                                     </div>
-                                    <ChevronRight className="w-3 h-3 text-gray-300 group-hover:text-[#268700] transition-colors" />
+                                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#268700] transition-colors" />
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    {/* Right Column: Event Form - Perfectly matched height */}
-                    <div className="lg:col-span-5">
-                        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col h-full">
-                            <h2 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-[#268700]" />
+                    {/* Right Column: Event Form - Wider & Primary */}
+                    <div className="lg:col-span-7">
+                        <div className="bg-white rounded-[1.5rem] p-7 shadow-sm border border-gray-100 h-full">
+                            <h2 className="text-lg font-black text-gray-900 mb-6 flex items-center gap-3 underline decoration-green-500/30 underline-offset-8">
+                                <Calendar className="w-5 h-5 text-[#268700]" />
                                 Event Details
                             </h2>
 
-                            <div className="space-y-3 flex-1 flex flex-col justify-center">
+                            <div className="space-y-4">
                                 <div>
-                                    <label className="block text-[6px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 px-1">Event Type *</label>
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] mb-1.5 px-1">Event Type *</label>
                                     <select
                                         value={selectedEventType}
                                         onChange={(e) => setSelectedEventType(e.target.value)}
-                                        className="w-full px-3 py-1.5 rounded-lg bg-gray-50 border border-transparent text-[11px] font-black focus:outline-none focus:border-[#268700] focus:bg-white transition-all appearance-none cursor-pointer"
+                                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent text-sm font-black focus:outline-none focus:border-[#268700] focus:bg-white transition-all appearance-none cursor-pointer"
                                     >
                                         <option value="">Select Event Type</option>
                                         {occasions.map((occ) => (
@@ -229,13 +230,13 @@ export default function DishDetailsPage() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-[6px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 px-1">Location *</label>
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] mb-1.5 px-1">Location *</label>
                                     <div className="relative">
-                                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                         <select
                                             value={selectedLocation}
                                             onChange={(e) => setSelectedLocation(e.target.value)}
-                                            className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-gray-50 border border-transparent text-[11px] font-black focus:outline-none focus:border-[#268700] focus:bg-white transition-all appearance-none cursor-pointer"
+                                            className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border border-transparent text-sm font-black focus:outline-none focus:border-[#268700] focus:bg-white transition-all appearance-none cursor-pointer"
                                         >
                                             <option value="">Select Location</option>
                                             <option value="Dubai Marina">Dubai Marina</option>
@@ -247,39 +248,39 @@ export default function DishDetailsPage() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-[6px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 px-1">Guests *</label>
+                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] mb-1.5 px-1">Guests *</label>
                                         <div className="relative">
-                                            <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                                            <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                             <input
                                                 type="number"
                                                 value={guestCount}
                                                 onChange={(e) => setGuestCount(parseInt(e.target.value))}
                                                 min="1"
-                                                className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-gray-50 border border-transparent text-[11px] font-black focus:outline-none focus:border-[#268700] focus:bg-white transition-all"
+                                                className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border border-transparent text-sm font-black focus:outline-none focus:border-[#268700] focus:bg-white transition-all"
                                             />
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label className="block text-[6px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 px-1">Date *</label>
+                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] mb-1.5 px-1">Date *</label>
                                         <div className="relative">
-                                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                             <input
                                                 type="date"
                                                 value={eventDate}
                                                 onChange={(e) => setEventDate(e.target.value)}
-                                                className="w-full pl-8 pr-1 py-1.5 rounded-lg bg-gray-50 border border-transparent text-[11px] font-black focus:outline-none focus:border-[#268700] focus:bg-white transition-all cursor-pointer"
+                                                className="w-full pl-10 pr-1 py-3 rounded-xl bg-gray-50 border border-transparent text-sm font-black focus:outline-none focus:border-[#268700] focus:bg-white transition-all cursor-pointer"
                                             />
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="mt-2 pt-2 border-t border-gray-50">
-                                <p className="text-[7px] text-gray-300 font-bold text-center">
-                                    Prices vary based on guests and area
+                            <div className="mt-8 pt-6 border-t border-gray-50 text-center">
+                                <p className="text-[10px] text-gray-300 font-bold uppercase tracking-widest">
+                                    Secure your booking now
                                 </p>
                             </div>
                         </div>
@@ -287,24 +288,24 @@ export default function DishDetailsPage() {
                 </div>
             </div>
 
-            {/* Sticky Bottom Bar - Ultra Compact */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white/95 border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] px-4 py-3 z-50 backdrop-blur-md">
-                <div className="max-w-[1000px] mx-auto flex items-center justify-between">
-                    <div className="flex flex-col">
-                        <span className="text-[7px] font-black text-gray-400 uppercase tracking-[0.3em] mb-0.5">Starting Price</span>
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-[10px] font-black text-gray-900 tracking-tight">AED</span>
-                            <span className="text-2xl font-black text-gray-900 tracking-tighter">{dish.price.toLocaleString()}</span>
-                            <span className="text-[8px] font-bold text-gray-400 ml-1">/ person</span>
+            {/* Sticky Bottom Bar - Integrated & Balanced */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white/95 border-t border-gray-100 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] px-8 py-4 z-50 backdrop-blur-md">
+                <div className="max-w-[1000px] mx-auto flex items-center justify-between gap-12">
+                    <div className="flex flex-col shrink-0">
+                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.4em] mb-1">Starting Price</span>
+                        <div className="flex items-baseline gap-1.5">
+                            <span className="text-xs font-black text-gray-900 tracking-tight">AED</span>
+                            <span className="text-3xl font-black text-gray-900 tracking-tighter leading-none lowercase text-[#2EB400]">{dish.price.toLocaleString()}</span>
+                            <span className="text-[11px] font-bold text-gray-400 ml-2">/ person</span>
                         </div>
                     </div>
 
                     <button
                         onClick={handleViewPackages}
-                        className="bg-[#2EB400] text-white px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-[#268700] transition-all shadow-lg active:scale-95 flex items-center gap-2 group"
+                        className="bg-[#2EB400] text-white px-10 py-3.5 rounded-2xl font-black text-sm uppercase tracking-[0.25em] hover:bg-[#268700] transition-all shadow-xl shadow-green-100 active:scale-95 flex items-center gap-4 group flex-1 max-w-[400px] justify-center"
                     >
-                        View Package
-                        <ChevronRight className="w-3 h-3 stroke-[3]" />
+                        View Menu Package
+                        <ChevronRight className="w-5 h-5 stroke-[3]" />
                     </button>
                 </div>
             </div>
