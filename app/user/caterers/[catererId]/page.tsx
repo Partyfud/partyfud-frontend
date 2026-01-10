@@ -450,78 +450,59 @@ export default function CatererMenuPage() {
                     : parseFloat(String(packages[0].rating)).toFixed(1)
                   : 'N/A'}
               </div>
+
+              {/* Capacity & Service Details - Inline */}
+              {(caterer as any).catererinfo && (
+                <div className="flex flex-wrap gap-4 mb-3 items-center">
+                  {(caterer as any).catererinfo.min_guests && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-500">Min:</span>
+                      <span className="text-sm font-semibold text-[#268700]">{(caterer as any).catererinfo.min_guests}</span>
+                      <span className="text-xs text-gray-500">guests</span>
+                    </div>
+                  )}
+                  {(caterer as any).catererinfo.max_guests && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-500">Max:</span>
+                      <span className="text-sm font-semibold text-[#268700]">{(caterer as any).catererinfo.max_guests}</span>
+                      <span className="text-xs text-gray-500">guests</span>
+                    </div>
+                  )}
+                  {(caterer as any).catererinfo.staff_count && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-500">Staff:</span>
+                      <span className="text-sm font-semibold text-[#268700]">{(caterer as any).catererinfo.staff_count}</span>
+                    </div>
+                  )}
+                  {(caterer as any).catererinfo.servers_count && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-500">Servers:</span>
+                      <span className="text-sm font-semibold text-[#268700]">{(caterer as any).catererinfo.servers_count}</span>
+                    </div>
+                  )}
+                  {(caterer as any).catererinfo.service_options && (caterer as any).catererinfo.service_options.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      {(caterer as any).catererinfo.service_options.map((option: string, index: number) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700"
+                        >
+                          {option === 'DELIVERY_ONLY' && '🚚 Delivery'}
+                          {option === 'DELIVERY_SETUP' && '🚚 Setup'}
+                          {option === 'FULL_SERVICE' && '⭐ Full Service'}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <p className="text-sm text-gray-600 mb-2">
                 {caterer.description || 'Award-winning catering service specializing in Mediterranean and French cuisine. We bring restaurant-quality food to your events with impeccable service.'}
               </p>
               <p className="font-semibold text-gray-900">{caterer.priceRange}</p>
             </div>
           </div>
-
-          {/* Capacity & Service Details Row */}
-          {(caterer as any).catererinfo && (
-            <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                {/* Min Guests */}
-                {(caterer as any).catererinfo.min_guests && (
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-[#268700] mb-1">
-                      {(caterer as any).catererinfo.min_guests}
-                    </div>
-                    <div className="text-xs text-gray-600">Min Guests</div>
-                  </div>
-                )}
-
-                {/* Max Guests */}
-                {(caterer as any).catererinfo.max_guests && (
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-[#268700] mb-1">
-                      {(caterer as any).catererinfo.max_guests}
-                    </div>
-                    <div className="text-xs text-gray-600">Max Guests</div>
-                  </div>
-                )}
-
-                {/* Staff Count */}
-                {(caterer as any).catererinfo.staff_count && (
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-[#268700] mb-1">
-                      {(caterer as any).catererinfo.staff_count}
-                    </div>
-                    <div className="text-xs text-gray-600">Staff</div>
-                  </div>
-                )}
-
-                {/* Servers Count */}
-                {(caterer as any).catererinfo.servers_count && (
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-[#268700] mb-1">
-                      {(caterer as any).catererinfo.servers_count}
-                    </div>
-                    <div className="text-xs text-gray-600">Servers</div>
-                  </div>
-                )}
-
-                {/* Service Options */}
-                {(caterer as any).catererinfo.service_options && (caterer as any).catererinfo.service_options.length > 0 && (
-                  <div className="col-span-2 md:col-span-4 lg:col-span-3">
-                    <div className="text-xs text-gray-600 mb-2 font-medium">Service Options:</div>
-                    <div className="flex flex-wrap gap-2">
-                      {(caterer as any).catererinfo.service_options.map((option: string, index: number) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700"
-                        >
-                          {option === 'DELIVERY_ONLY' && '🚚 Delivery Only'}
-                          {option === 'DELIVERY_SETUP' && '🚚 Delivery + Setup'}
-                          {option === 'FULL_SERVICE' && '⭐ Full Service'}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Tabs */}
           <div className="flex gap-2 mb-6 w-full px-4 bg-white">
