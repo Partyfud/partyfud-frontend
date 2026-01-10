@@ -33,7 +33,7 @@ export default function CatererMenuPage() {
   const [selectedDishes, setSelectedDishes] = useState<Set<string>>(new Set());
   const [dietaryFilter, setDietaryFilter] = useState<DietaryFilter>(null);
   const [loadingDishes, setLoadingDishes] = useState(false);
-  
+
   // Event details form states (for Set Menus tab)
   const [eventType, setEventType] = useState<string>('');
   const [location, setLocation] = useState<string>('');
@@ -457,13 +457,79 @@ export default function CatererMenuPage() {
             </div>
           </div>
 
+          {/* Capacity & Service Details Row */}
+          {(caterer as any).catererinfo && (
+            <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                {/* Min Guests */}
+                {(caterer as any).catererinfo.min_guests && (
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-[#268700] mb-1">
+                      {(caterer as any).catererinfo.min_guests}
+                    </div>
+                    <div className="text-xs text-gray-600">Min Guests</div>
+                  </div>
+                )}
+
+                {/* Max Guests */}
+                {(caterer as any).catererinfo.max_guests && (
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-[#268700] mb-1">
+                      {(caterer as any).catererinfo.max_guests}
+                    </div>
+                    <div className="text-xs text-gray-600">Max Guests</div>
+                  </div>
+                )}
+
+                {/* Staff Count */}
+                {(caterer as any).catererinfo.staff_count && (
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-[#268700] mb-1">
+                      {(caterer as any).catererinfo.staff_count}
+                    </div>
+                    <div className="text-xs text-gray-600">Staff</div>
+                  </div>
+                )}
+
+                {/* Servers Count */}
+                {(caterer as any).catererinfo.servers_count && (
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-[#268700] mb-1">
+                      {(caterer as any).catererinfo.servers_count}
+                    </div>
+                    <div className="text-xs text-gray-600">Servers</div>
+                  </div>
+                )}
+
+                {/* Service Options */}
+                {(caterer as any).catererinfo.service_options && (caterer as any).catererinfo.service_options.length > 0 && (
+                  <div className="col-span-2 md:col-span-4 lg:col-span-3">
+                    <div className="text-xs text-gray-600 mb-2 font-medium">Service Options:</div>
+                    <div className="flex flex-wrap gap-2">
+                      {(caterer as any).catererinfo.service_options.map((option: string, index: number) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700"
+                        >
+                          {option === 'DELIVERY_ONLY' && '🚚 Delivery Only'}
+                          {option === 'DELIVERY_SETUP' && '🚚 Delivery + Setup'}
+                          {option === 'FULL_SERVICE' && '⭐ Full Service'}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Tabs */}
           <div className="flex gap-2 mb-6 w-full px-4 bg-white">
             <button
               onClick={() => setActiveTab('setMenus')}
               className={`flex-1 py-3 text-base font-semibold rounded-lg transition ${activeTab === 'setMenus'
-                  ? 'bg-[#268700] text-white shadow-md'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                ? 'bg-[#268700] text-white shadow-md'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                 }`}
             >
               Set Menus
@@ -471,8 +537,8 @@ export default function CatererMenuPage() {
             <button
               onClick={() => setActiveTab('buildYourOwn')}
               className={`flex-1 py-3 text-base font-semibold rounded-lg transition ${activeTab === 'buildYourOwn'
-                  ? 'bg-[#268700] text-white shadow-md'
-                  : 'bg-white text-gray-700  border-gray-300 hover:bg-gray-50'
+                ? 'bg-[#268700] text-white shadow-md'
+                : 'bg-white text-gray-700  border-gray-300 hover:bg-gray-50'
                 }`}
             >
               Build Your Own
@@ -480,8 +546,8 @@ export default function CatererMenuPage() {
             <button
               onClick={() => setActiveTab('customiseMenu')}
               className={`flex-1 py-3 text-base font-semibold rounded-lg transition ${activeTab === 'customiseMenu'
-                  ? 'bg-[#268700] text-white shadow-md'
-                  : 'bg-white text-gray-700  border-gray-300 hover:bg-gray-50'
+                ? 'bg-[#268700] text-white shadow-md'
+                : 'bg-white text-gray-700  border-gray-300 hover:bg-gray-50'
                 }`}
             >
               Customise Menu
@@ -499,103 +565,103 @@ export default function CatererMenuPage() {
                   <h2 className="text-xl font-semibold text-gray-900">Select Package</h2>
                 </div>
 
-              {/* Group packages by customisation_type */}
-              {(() => {
-                const fixedPackages = packages.filter(
-                  (pkg) => !pkg.customisation_type || pkg.customisation_type === 'FIXED'
-                );
-                const customisablePackages = packages.filter(
-                  (pkg) => pkg.customisation_type === 'CUSTOMISABLE' || pkg.customisation_type === 'CUSTOMIZABLE'
-                );
+                {/* Group packages by customisation_type */}
+                {(() => {
+                  const fixedPackages = packages.filter(
+                    (pkg) => !pkg.customisation_type || pkg.customisation_type === 'FIXED'
+                  );
+                  const customisablePackages = packages.filter(
+                    (pkg) => pkg.customisation_type === 'CUSTOMISABLE' || pkg.customisation_type === 'CUSTOMIZABLE'
+                  );
 
-                const renderPackageCard = (pkg: Package) => {
-                  const isSelected = selectedPackage?.id === pkg.id;
-                  const menuItems = formatMenuItems(pkg);
-                  const totalPrice = pkg.price_per_person * guestCount;
+                  const renderPackageCard = (pkg: Package) => {
+                    const isSelected = selectedPackage?.id === pkg.id;
+                    const menuItems = formatMenuItems(pkg);
+                    const totalPrice = pkg.price_per_person * guestCount;
 
-                  return (
-                    <div
-                      key={pkg.id}
-                      onClick={() => setSelectedPackage(pkg)}
-                      className={`bg-white border-2 rounded-lg p-3 cursor-pointer transition ${isSelected
+                    return (
+                      <div
+                        key={pkg.id}
+                        onClick={() => setSelectedPackage(pkg)}
+                        className={`bg-white border-2 rounded-lg p-3 cursor-pointer transition ${isSelected
                           ? 'border-[#268700] bg-green-50 shadow-md'
                           : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                        }`}
-                    >
-                      <h3 className="font-semibold text-base text-gray-900 mb-1">{pkg.name}</h3>
-                      <p className="text-xs text-gray-600 mb-3">{pkg.package_type?.name || 'Package'}</p>
+                          }`}
+                      >
+                        <h3 className="font-semibold text-base text-gray-900 mb-1">{pkg.name}</h3>
+                        <p className="text-xs text-gray-600 mb-3">{pkg.package_type?.name || 'Package'}</p>
 
-                      <div className="space-y-1.5 text-xs text-gray-700 mb-3">
-                        <div className="line-clamp-1">
-                          <span className="font-medium">Welcome Drink:</span> <span className="text-gray-600">{menuItems.welcomeDrink}</span>
+                        <div className="space-y-1.5 text-xs text-gray-700 mb-3">
+                          <div className="line-clamp-1">
+                            <span className="font-medium">Welcome Drink:</span> <span className="text-gray-600">{menuItems.welcomeDrink}</span>
+                          </div>
+                          <div className="line-clamp-1">
+                            <span className="font-medium">Starter:</span> <span className="text-gray-600">{menuItems.starter}</span>
+                          </div>
+                          <div className="line-clamp-1">
+                            <span className="font-medium">Main:</span> <span className="text-gray-600">{menuItems.main}</span>
+                          </div>
+                          <div className="line-clamp-1">
+                            <span className="font-medium">Sides:</span> <span className="text-gray-600">{menuItems.sides}</span>
+                          </div>
+                          <div className="line-clamp-1">
+                            <span className="font-medium">Dessert:</span> <span className="text-gray-600">{menuItems.dessert}</span>
+                          </div>
                         </div>
-                        <div className="line-clamp-1">
-                          <span className="font-medium">Starter:</span> <span className="text-gray-600">{menuItems.starter}</span>
-                        </div>
-                        <div className="line-clamp-1">
-                          <span className="font-medium">Main:</span> <span className="text-gray-600">{menuItems.main}</span>
-                        </div>
-                        <div className="line-clamp-1">
-                          <span className="font-medium">Sides:</span> <span className="text-gray-600">{menuItems.sides}</span>
-                        </div>
-                        <div className="line-clamp-1">
-                          <span className="font-medium">Dessert:</span> <span className="text-gray-600">{menuItems.dessert}</span>
+
+                        <div className="border-t border-gray-200 pt-3">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-semibold text-sm text-gray-900 flex items-center gap-1">
+                              <img src="/dirham.svg" alt="AED" className="w-4 h-4" />
+                              {pkg.price_per_person.toLocaleString()}/person
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-600 flex items-center gap-1">
+                            Total for {guestCount} guests: <span className="font-semibold text-gray-900 flex items-center gap-1"><img src="/dirham.svg" alt="AED" className="w-3 h-3" />{totalPrice.toLocaleString()}</span>
+                          </div>
                         </div>
                       </div>
+                    );
+                  };
 
-                      <div className="border-t border-gray-200 pt-3">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="font-semibold text-sm text-gray-900 flex items-center gap-1">
-                            <img src="/dirham.svg" alt="AED" className="w-4 h-4" />
-                            {pkg.price_per_person.toLocaleString()}/person
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-600 flex items-center gap-1">
-                          Total for {guestCount} guests: <span className="font-semibold text-gray-900 flex items-center gap-1"><img src="/dirham.svg" alt="AED" className="w-3 h-3" />{totalPrice.toLocaleString()}</span>
-                        </div>
+                  if (packages.length === 0) {
+                    return (
+                      <div className="text-center py-10">
+                        <p className="text-gray-500">No packages available for this caterer.</p>
                       </div>
-                    </div>
-                  );
-                };
+                    );
+                  }
 
-                if (packages.length === 0) {
                   return (
-                    <div className="text-center py-10">
-                      <p className="text-gray-500">No packages available for this caterer.</p>
+                    <div className="space-y-8">
+                      {/* Fixed Packages Section */}
+                      {fixedPackages.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">Fixed Packages</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {fixedPackages.map(renderPackageCard)}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Customisable Packages Section */}
+                      {customisablePackages.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">Customisable Packages</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {customisablePackages.map(renderPackageCard)}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
-                }
-
-                return (
-                  <div className="space-y-8">
-                    {/* Fixed Packages Section */}
-                    {fixedPackages.length > 0 && (
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Fixed Packages</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {fixedPackages.map(renderPackageCard)}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Customisable Packages Section */}
-                    {customisablePackages.length > 0 && (
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Customisable Packages</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {customisablePackages.map(renderPackageCard)}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
+                })()}
               </div>
 
               {/* Right Column - Event Details Form */}
               <aside className="bg-white border border-gray-200 rounded-xl p-5 h-fit">
                 <h3 className="font-semibold text-lg mb-4">Event Details</h3>
-                
+
                 {/* Event Type */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -726,8 +792,8 @@ export default function CatererMenuPage() {
                     onClick={handleAddToCart}
                     disabled={!selectedPackage || addingToCart || !eventType || !location || !eventDate}
                     className={`px-8 py-3 rounded-full font-semibold transition ${!selectedPackage || addingToCart || !eventType || !location || !eventDate
-                        ? 'bg-gray-400 cursor-not-allowed text-white'
-                        : 'bg-[#268700] text-white hover:bg-[#1f6b00]'
+                      ? 'bg-gray-400 cursor-not-allowed text-white'
+                      : 'bg-[#268700] text-white hover:bg-[#1f6b00]'
                       }`}
                   >
                     {addingToCart ? 'Proceeding...' : 'Continue to Package'}
@@ -766,8 +832,8 @@ export default function CatererMenuPage() {
               <button
                 onClick={() => setDietaryFilter(dietaryFilter === 'veg' ? null : 'veg')}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition ${dietaryFilter === 'veg'
-                    ? 'bg-[#268700] text-white'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  ? 'bg-[#268700] text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                   }`}
               >
                 Veg
@@ -775,8 +841,8 @@ export default function CatererMenuPage() {
               <button
                 onClick={() => setDietaryFilter(dietaryFilter === 'glutenFree' ? null : 'glutenFree')}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition ${dietaryFilter === 'glutenFree'
-                    ? 'bg-[#268700] text-white'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  ? 'bg-[#268700] text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                   }`}
               >
                 Gluten Free
@@ -784,8 +850,8 @@ export default function CatererMenuPage() {
               <button
                 onClick={() => setDietaryFilter(dietaryFilter === 'nonVeg' ? null : 'nonVeg')}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition ${dietaryFilter === 'nonVeg'
-                    ? 'bg-[#268700] text-white'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  ? 'bg-[#268700] text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                   }`}
               >
                 Non Veg
@@ -793,8 +859,8 @@ export default function CatererMenuPage() {
               <button
                 onClick={() => setDietaryFilter(dietaryFilter === 'sugarFree' ? null : 'sugarFree')}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition ${dietaryFilter === 'sugarFree'
-                    ? 'bg-[#268700] text-white'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  ? 'bg-[#268700] text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                   }`}
               >
                 Sugar Free
@@ -845,8 +911,8 @@ export default function CatererMenuPage() {
                             <div
                               key={dish.id}
                               className={`flex items-center justify-between p-3 rounded-lg border transition cursor-pointer ${isSelected
-                                  ? 'border-[#268700] bg-green-50'
-                                  : 'border-gray-200 hover:border-gray-300'
+                                ? 'border-[#268700] bg-green-50'
+                                : 'border-gray-200 hover:border-gray-300'
                                 }`}
                               onClick={() => toggleDishSelection(dish.id, categoryGroup)}
                             >
@@ -887,8 +953,8 @@ export default function CatererMenuPage() {
                   onClick={handleAddToCart}
                   disabled={selectedDishes.size === 0 || addingToCart}
                   className={`px-8 py-3 rounded-full font-semibold transition ${selectedDishes.size === 0 || addingToCart
-                      ? 'bg-gray-400 cursor-not-allowed text-white'
-                      : 'bg-[#268700] text-white hover:bg-[#1f6b00]'
+                    ? 'bg-gray-400 cursor-not-allowed text-white'
+                    : 'bg-[#268700] text-white hover:bg-[#1f6b00]'
                     }`}
                 >
                   {addingToCart ? 'Creating...' : 'Create Package'}
@@ -1004,8 +1070,8 @@ export default function CatererMenuPage() {
                           setSelectedDietaryPreferences(newSet);
                         }}
                         className={`px-4 py-2 rounded-full text-sm font-medium transition ${isSelected
-                            ? 'bg-green-100 text-green-800 border border-green-300'
-                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                          ? 'bg-green-100 text-green-800 border border-green-300'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                           }`}
                       >
                         {pref}
@@ -1076,8 +1142,8 @@ export default function CatererMenuPage() {
                   }}
                   disabled={submittingProposal || !catererId}
                   className={`px-8 py-3 rounded-full font-semibold transition ${submittingProposal || !catererId
-                      ? 'bg-gray-400 cursor-not-allowed text-white'
-                      : 'bg-[#268700] text-white hover:bg-[#1f6b00]'
+                    ? 'bg-gray-400 cursor-not-allowed text-white'
+                    : 'bg-[#268700] text-white hover:bg-[#1f6b00]'
                     }`}
                 >
                   {submittingProposal ? 'Submitting...' : 'Request a Quote'}
@@ -1089,52 +1155,54 @@ export default function CatererMenuPage() {
       </div>
 
       {/* Proposal Success Modal */}
-      {showProposalSuccessModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Blurred Background */}
-          <div
-            className="absolute inset-0 bg-black/30 backdrop-blur-md"
-            onClick={() => setShowProposalSuccessModal(false)}
-          />
-
-          {/* Modal Content */}
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 transform transition-all">
-            {/* Close Button */}
-            <button
+      {
+        showProposalSuccessModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Blurred Background */}
+            <div
+              className="absolute inset-0 bg-black/30 backdrop-blur-md"
               onClick={() => setShowProposalSuccessModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-              aria-label="Close"
-            >
-              <X size={24} />
-            </button>
+            />
 
-            {/* Success Icon */}
-            <div className="flex justify-center mb-6">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
-                <Check className="w-12 h-12 text-[#268700]" strokeWidth={3} />
-              </div>
-            </div>
-
-            {/* Success Message */}
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                Proposal Submitted!
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Your proposal request has been submitted successfully. We will get back to you soon with a customized quote.
-              </p>
-
-              {/* Action Button */}
+            {/* Modal Content */}
+            <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 transform transition-all">
+              {/* Close Button */}
               <button
                 onClick={() => setShowProposalSuccessModal(false)}
-                className="w-full bg-[#268700] text-white py-3 px-6 rounded-full font-semibold hover:bg-[#1f6b00] transition-colors"
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Close"
               >
-                Close
+                <X size={24} />
               </button>
+
+              {/* Success Icon */}
+              <div className="flex justify-center mb-6">
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+                  <Check className="w-12 h-12 text-[#268700]" strokeWidth={3} />
+                </div>
+              </div>
+
+              {/* Success Message */}
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                  Proposal Submitted!
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Your proposal request has been submitted successfully. We will get back to you soon with a customized quote.
+                </p>
+
+                {/* Action Button */}
+                <button
+                  onClick={() => setShowProposalSuccessModal(false)}
+                  className="w-full bg-[#268700] text-white py-3 px-6 rounded-full font-semibold hover:bg-[#1f6b00] transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </section>
+        )
+      }
+    </section >
   );
 }
