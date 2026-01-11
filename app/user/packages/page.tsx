@@ -42,6 +42,7 @@ export default function PackagesPage() {
     // Data states
     const [allPackages, setAllPackages] = useState<Package[]>([]); // Store all packages from API
     const [packages, setPackages] = useState<Package[]>([]); // Filtered packages to display
+    const [apiPackagesData, setApiPackagesData] = useState<ApiPackage[]>([]); // Store raw API data for people_count access
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [occasions, setOccasions] = useState<Array<{ id: string; name: string }>>([]);
@@ -218,6 +219,9 @@ export default function PackagesPage() {
                 const filters = buildFilters();
                 const response = await userApi.getAllPackages(filters);
                 if (response.data?.data) {
+                    // Store raw API data
+                    setApiPackagesData(response.data.data);
+
                     // Map API response to component structure
                     const mappedPackages: Package[] = response.data.data
                         .filter((pkg: ApiPackage) => (pkg as any).caterer?.id) // Only include packages with valid caterer ID
@@ -620,49 +624,102 @@ export default function PackagesPage() {
                             <div className="mb-4 text-sm text-gray-600">
                                 Showing {packages.length} package{packages.length !== 1 ? 's' : ''}
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                {packages.map((pkg) => (
-                                    <Link
-                                        key={pkg.id}
-                                        href={`/user/caterers/${pkg.catererId}/${pkg.id}`}
-                                        className="bg-white border border-gray-200 rounded-xl p-3 hover:shadow-md transition cursor-pointer block"
-                                    >
-                                        <div className="relative h-[180px] rounded-lg overflow-hidden">
-                                            <Image
-                                                src={pkg.image}
-                                                alt={pkg.title}
-                                                fill
-                                                className="object-cover"
-                                            />
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {packages.map((pkg) => {
+                                    const apiPkg = apiPackagesData.find((p: any) => p.id === pkg.id);
+                                    const peopleCount = apiPkg?.people_count || 1;
+                                    const pricePerPerson = pkg.price / peopleCount;
 
-                                            <div className="absolute top-2 left-2 flex gap-2">
-                                                {pkg.discount && (
-                                                    <span className="bg-white text-xs px-2 py-1 rounded-full">
-                                                        {pkg.discount}
-                                                    </span>
-                                                )}
-                                                {pkg.customizable && (
-                                                    <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">
-                                                        Customisable
-                                                    </span>
-                                                )}
+                                    return (
+                                        <div
+                                            key={pkg.id}
+                                            className="bg-white rounded-[1.5rem] overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col"
+                                        >
+                                            {/* Image Section */}
+                                            <div className="relative h-[240px] w-full">
+                                                <Image
+                                                    src={pkg.image}
+                                                    alt={pkg.title}
+                                                    fill
+                                                    className="object-cover"
+                                                />
+
+                                                {/* Badges */}
+                                                <div className="absolute top-4 right-4 flex flex-col gap-2">
+                                                    {pkg.customizable && (
+                                                        <span className="bg-green-500 text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-wider shadow-lg">
+                                                            Customisable
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
 
-                                            {pkg.rating && (
-                                                <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
-                                                    ⭐ {Number(pkg.rating).toFixed(1)}
+                                            {/* Content Section */}
+                                            <div className="p-5 flex flex-col flex-1">
+                                                {/* Caterer Name with Verified Badge */}
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <svg className="w-4 h-4 text-green-600 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                                                        <circle cx="12" cy="12" r="3" />
+                                                    </svg>
+                                                    <span className="text-sm font-bold text-gray-700">{pkg.caterer}</span>
+                                                    <svg className="w-4 h-4 text-blue-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                    </svg>
                                                 </div>
-                                            )}
-                                        </div>
 
-                                        <h4 className="mt-3 font-medium">{pkg.title}</h4>
-                                        <p className="text-sm text-gray-500">{pkg.caterer}</p>
-                                        <p className="mt-2 font-semibold flex items-center gap-1">
-                                            <img src="/dirham.svg" alt="AED" className="w-4 h-4" />
-                                            {pkg.price.toLocaleString()}
-                                        </p>
-                                    </Link>
-                                ))}
+                                                {/* Package Name */}
+                                                <h3 className="text-xl font-black text-gray-900 mb-2 leading-tight">
+                                                    {pkg.title}
+                                                </h3>
+
+                                                {/* Package Description (Hardcoded for now) */}
+                                                <p className="text-sm text-gray-500 mb-4 line-clamp-2 leading-relaxed">
+                                                    Authentic cuisine with fresh ingredients. Perfect for sophisticated palates.
+                                                </p>
+
+                                                {/* Rating and People Count */}
+                                                <div className="flex items-center gap-4 mb-4">
+                                                    {pkg.rating && (
+                                                        <div className="flex items-center gap-1.5">
+                                                            <svg className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                            </svg>
+                                                            <span className="text-sm font-bold text-gray-900">{Number(pkg.rating).toFixed(1)}</span>
+                                                            <span className="text-xs text-gray-400">(43)</span>
+                                                        </div>
+                                                    )}
+                                                    <div className="flex items-center gap-1.5">
+                                                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                        </svg>
+                                                        <span className="text-sm font-bold text-gray-700">{peopleCount}+</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Spacer to push price/button to bottom */}
+                                                <div className="flex-1"></div>
+
+                                                {/* Price and Button */}
+                                                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                                                    <div>
+                                                        <div className="text-2xl font-black text-gray-900">
+                                                            AED {Math.round(pricePerPerson)}
+                                                        </div>
+                                                        <div className="text-xs text-gray-400 font-medium">per person</div>
+                                                        <div className="text-[10px] text-gray-400 mt-0.5">Min. AED {pkg.price.toLocaleString()}</div>
+                                                    </div>
+                                                    <Link
+                                                        href={`/user/caterers/${pkg.catererId}/${pkg.id}`}
+                                                        className="bg-[#268700] hover:bg-[#1f6b00] text-white px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-lg hover:shadow-xl active:scale-95"
+                                                    >
+                                                        View Menu
+                                                    </Link>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </>
                     )}
