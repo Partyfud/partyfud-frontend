@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/Input';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function SignupPage() {
+function SignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
@@ -54,7 +55,7 @@ export default function SignupPage() {
     } else if (user.type === 'ADMIN') {
       router.replace('/admin/dashboard');
     }
-  }, [user, justSignedUp, router]);
+  }, [user, justSignedUp, router, redirect]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,13 +242,19 @@ export default function SignupPage() {
                   Sign in
                 </Link>
               </p>
-
-
             </div>
           </form>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <SignupContent />
+    </Suspense>
   );
 }
 

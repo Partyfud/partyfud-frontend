@@ -1,4 +1,5 @@
 'use client';
+// Build sync: Suspense wrapped
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -8,8 +9,9 @@ import { Input } from '@/components/ui/Input';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
@@ -46,7 +48,7 @@ export default function LoginPage() {
         router.replace('/admin/dashboard');
       }
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, redirect]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,23 +173,20 @@ export default function LoginPage() {
                     Sign up for free
                   </Link>
                 </p>
-
-                {/* <Link href="/login" className="flex justify-center">
-                  <Button
-                    type="button"
-                    variant="primary"
-                    className="w-[60%] py-2 text-base font-semibold mt-24"
-                  >
-                    Login / Signup as Caterer
-                  </Button>
-                </Link> */}
-
               </div>
             </form>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
 
