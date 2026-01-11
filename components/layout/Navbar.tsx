@@ -71,10 +71,10 @@ export function Navbar() {
         };
 
         fetchCartCount();
-        
+
         // Refresh cart count periodically (every 5 seconds)
         const interval = setInterval(fetchCartCount, 5000);
-        
+
         return () => clearInterval(interval);
     }, [user]);
 
@@ -109,26 +109,26 @@ export function Navbar() {
 
                 {/* Center - Nav Links */}
                 <nav className="hidden md:flex items-center gap-10 absolute left-1/2 transform -translate-x-1/2">
-                    <Link 
-                        href="/user/dashboard" 
+                    <Link
+                        href="/user/dashboard"
                         className="text-base font-medium text-gray-700 hover:text-[#268700] transition-colors duration-200 py-2"
                     >
                         Home
                     </Link>
-                    <Link 
-                        href="/user/menu" 
+                    <Link
+                        href="/user/menu"
                         className="text-base font-medium text-gray-700 hover:text-[#268700] transition-colors duration-200 py-2"
                     >
                         Menu
                     </Link>
-                    <Link 
-                        href="/user/packages" 
+                    <Link
+                        href="/user/packages"
                         className="text-base font-medium text-gray-700 hover:text-[#268700] transition-colors duration-200 py-2"
                     >
                         Packages
                     </Link>
-                    <Link 
-                        href="/user/caterers" 
+                    <Link
+                        href="/user/caterers"
                         className="text-base font-medium text-gray-700 hover:text-[#268700] transition-colors duration-200 py-2"
                     >
                         Caterers
@@ -137,7 +137,7 @@ export function Navbar() {
 
                 {/* Right Section (Icons + User + Actions) */}
                 <div className="flex items-center gap-5 ml-auto">
-                    <Link 
+                    <Link
                         href="/user/cart"
                         className="relative text-gray-600 hover:text-[#268700] transition-colors"
                     >
@@ -205,10 +205,16 @@ export function Navbar() {
                             )}
                         </div>
                     ) : (
-                        <User className="text-gray-600 cursor-pointer" size={20} />
+                        <Link
+                            href="/login"
+                            className="flex items-center gap-2 text-gray-700 hover:text-[#268700] transition-colors font-semibold py-2 px-3 rounded-lg hover:bg-gray-50"
+                        >
+                            <User size={20} />
+                            <span className="text-sm whitespace-nowrap">Sign In</span>
+                        </Link>
                     )}
 
-                    <button 
+                    <button
                         onClick={() => setIsPartnerFormOpen(true)}
                         className="bg-[#268700] text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-[#1f6b00] transition-all duration-200 shadow-sm hover:shadow-md"
                     >
@@ -218,9 +224,9 @@ export function Navbar() {
             </div>
 
             {/* Partner Form Modal */}
-            <PartnerForm 
-                isOpen={isPartnerFormOpen} 
-                onClose={() => setIsPartnerFormOpen(false)} 
+            <PartnerForm
+                isOpen={isPartnerFormOpen}
+                onClose={() => setIsPartnerFormOpen(false)}
             />
         </header>
     );
