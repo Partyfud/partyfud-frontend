@@ -713,7 +713,7 @@ export default function PackagesPage() {
                                                         href={`/user/caterers/${pkg.catererId}/${pkg.id}`}
                                                         className="bg-[#268700] hover:bg-[#1f6b00] text-white px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-lg hover:shadow-xl active:scale-95"
                                                     >
-                                                        View Menu
+                                                        View Package
                                                     </Link>
                                                 </div>
                                             </div>
