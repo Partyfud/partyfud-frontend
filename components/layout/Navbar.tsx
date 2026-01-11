@@ -1,5 +1,6 @@
 'use client';
 
+
 import Link from 'next/link';
 import { MapPin, Mail, User, ShoppingCart } from 'lucide-react';
 import Image from 'next/image';
