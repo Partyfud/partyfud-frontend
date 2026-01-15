@@ -112,25 +112,25 @@ export function Navbar() {
                 {/* Center - Nav Links */}
                 <nav className="hidden md:flex items-center gap-10 absolute left-1/2 transform -translate-x-1/2">
                     <Link
-                        href="/user/dashboard"
+                        href="/"
                         className="text-base font-medium text-gray-700 hover:text-[#268700] transition-colors duration-200 py-2"
                     >
                         Home
                     </Link>
                     <Link
-                        href="/user/menu"
+                        href="/menu"
                         className="text-base font-medium text-gray-700 hover:text-[#268700] transition-colors duration-200 py-2"
                     >
                         Menu
                     </Link>
                     <Link
-                        href="/user/packages"
+                        href="/packages"
                         className="text-base font-medium text-gray-700 hover:text-[#268700] transition-colors duration-200 py-2"
                     >
                         Packages
                     </Link>
                     <Link
-                        href="/user/caterers"
+                        href="/caterers"
                         className="text-base font-medium text-gray-700 hover:text-[#268700] transition-colors duration-200 py-2"
                     >
                         Caterers
@@ -140,7 +140,7 @@ export function Navbar() {
                 {/* Right Section (Icons + User + Actions) */}
                 <div className="flex items-center gap-5 ml-auto">
                     <Link
-                        href="/user/cart"
+                        href="/cart"
                         className="relative text-gray-600 hover:text-[#268700] transition-colors"
                     >
                         <ShoppingCart size={22} className="cursor-pointer" />
@@ -173,21 +173,21 @@ export function Navbar() {
                                     </div>
                                     <div className="px-3 py-2 space-y-2">
                                         <Link
-                                            href="/user/orders"
+                                            href="/orders"
                                             onClick={() => setIsDropdownOpen(false)}
                                             className="block w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors duration-200"
                                         >
                                             My Orders
                                         </Link>
                                         <Link
-                                            href="/user/mypackages"
+                                            href="/mypackages"
                                             onClick={() => setIsDropdownOpen(false)}
                                             className="block w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors duration-200"
                                         >
                                             My Packages
                                         </Link>
                                         <Link
-                                            href="/user/proposals"
+                                            href="/proposals"
                                             onClick={() => setIsDropdownOpen(false)}
                                             className="block w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors duration-200"
                                         >

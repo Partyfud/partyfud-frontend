@@ -190,7 +190,7 @@ export default function PopularPackagesPage() {
       params.append('occasion_name', occasionName);
     }
     const queryString = params.toString();
-    return queryString ? `/user/packages?${queryString}` : '/user/packages';
+    return queryString ? `/packages?${queryString}` : '/packages';
   };
 
   const viewAllUrl = buildViewAllUrl();
@@ -217,19 +217,19 @@ export default function PopularPackagesPage() {
             {packages.map((pkg) => (
               <Link
                 key={pkg.id}
-                href={`/user/caterers/${pkg.catererId}/${pkg.id}`}
+                href={`/caterers/${pkg.catererId}/${pkg.id}`}
                 className="min-w-[300px] bg-white border border-gray-200 rounded-2xl p-4 hover:shadow-md transition block"
               >
                 {/* Image */}
-                <div className="relative h-[200px] rounded-xl overflow-hidden">
+                <div className="relative h-[200px] rounded-xl overflow-hidden bg-gray-50">
                   <Image
                     src={pkg.image}
                     alt={pkg.title}
                     fill
-                    className="object-cover"
+                    className="object-contain p-4"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      target.src = '/user/package1.svg';
+                      target.src = '/logo2.svg';
                     }}
                   />
 

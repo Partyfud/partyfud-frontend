@@ -55,7 +55,7 @@ export default function Hero() {
         
         // Navigate to packages page with filters
         const queryString = params.toString();
-        router.push(`/user/packages${queryString ? `?${queryString}` : ''}`);
+        router.push(`/packages${queryString ? `?${queryString}` : ''}`);
     };
 
     return(

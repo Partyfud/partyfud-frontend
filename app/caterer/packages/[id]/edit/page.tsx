@@ -71,7 +71,7 @@ const DishImageInModal: React.FC<{ imageUrl: string | null | undefined; dishName
   const [imageError, setImageError] = React.useState(false);
   const [fallbackError, setFallbackError] = React.useState(false);
 
-  const fallbackImage = '/logo_partyfud.svg';
+  const fallbackImage = '/logo2.svg';
 
   return (
     <div className="w-full h-32 bg-gray-200 flex items-center justify-center overflow-hidden rounded mb-2 relative flex-shrink-0">

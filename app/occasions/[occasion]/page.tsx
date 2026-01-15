@@ -57,7 +57,7 @@ export default function OccasionPage() {
 
   const handleCtaClick = () => {
     if (occasionId) {
-      router.push(`/user/packages?occasion_id=${encodeURIComponent(occasionId)}`);
+      router.push(`/packages?occasion_id=${encodeURIComponent(occasionId)}`);
     }
   };
 

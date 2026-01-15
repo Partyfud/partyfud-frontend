@@ -14,7 +14,7 @@ const PackageImage: React.FC<{ imageUrl: string | null; packageName: string }> =
   const [imageError, setImageError] = React.useState(false);
   const [fallbackError, setFallbackError] = React.useState(false);
 
-  const fallbackImage = '/logo_partyfud.svg';
+  const fallbackImage = '/logo2.svg';
 
   return (
     <div className="w-full h-56 bg-gray-100 flex items-center justify-center overflow-hidden relative">
@@ -22,7 +22,7 @@ const PackageImage: React.FC<{ imageUrl: string | null; packageName: string }> =
         <img
           src={imageUrl}
           alt={packageName}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain p-4"
           onError={() => setImageError(true)}
         />
       ) : !fallbackError ? (

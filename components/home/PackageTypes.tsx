@@ -50,7 +50,7 @@ export default function PackageTypesPage() {
   };
 
   const handleOccasionClick = (occasionName: string) => {
-    router.push(`/user/packages?occasion_name=${encodeURIComponent(occasionName)}`);
+    router.push(`/packages?occasion_name=${encodeURIComponent(occasionName)}`);
   };
 
   if (loading) {

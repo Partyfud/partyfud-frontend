@@ -25,7 +25,7 @@ export default function Plan() {
 
         // Navigate with filters (can be used in menu page)
         router.push(
-            `/user/menu?eventType=${form.eventType}&date=${form.date}&location=${form.location}&guests=${form.guests}`
+            `/menu?eventType=${form.eventType}&date=${form.date}&location=${form.location}&guests=${form.guests}`
         );
     };
 
