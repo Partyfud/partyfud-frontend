@@ -7,7 +7,7 @@ export default function CallToAction() {
   const router = useRouter();
 
   const handleStartPlanning = () => {
-    router.push('/user/packages');
+    router.push('/packages');
   };
 
   const handleJoinPartner = () => {

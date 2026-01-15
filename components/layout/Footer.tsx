@@ -74,22 +74,22 @@ export const Footer: React.FC = () => {
           <h4 className="font-semibold mb-4 text-white">Quick Links</h4>
           <ul className="space-y-3 text-gray-400 text-sm">
             <li>
-              <Link href="/user/dashboard" className="hover:text-white transition-colors">
+              <Link href="/" className="hover:text-white transition-colors">
                 Home
               </Link>
             </li>
             <li>
-              <Link href="/user/menu" className="hover:text-white transition-colors">
+              <Link href="/menu" className="hover:text-white transition-colors">
                 Menu
               </Link>
             </li>
             <li>
-              <Link href="/user/packages" className="hover:text-white transition-colors">
+              <Link href="/packages" className="hover:text-white transition-colors">
                 Packages
               </Link>
             </li>
             <li>
-              <Link href="/user/caterers" className="hover:text-white transition-colors">
+              <Link href="/caterers" className="hover:text-white transition-colors">
                 Caterers
               </Link>
             </li>
@@ -109,17 +109,17 @@ export const Footer: React.FC = () => {
           <h4 className="font-semibold mb-4 text-white">Company</h4>
           <ul className="space-y-3 text-gray-400 text-sm">
             <li>
-              <Link href="/user/dashboard" className="hover:text-white transition-colors">
+              <Link href="/" className="hover:text-white transition-colors">
                 About Us
               </Link>
             </li>
             <li>
-              <Link href="/user/caterers" className="hover:text-white transition-colors">
+              <Link href="/caterers" className="hover:text-white transition-colors">
                 Our Caterers
               </Link>
             </li>
             <li>
-              <Link href="/user/packages" className="hover:text-white transition-colors">
+              <Link href="/packages" className="hover:text-white transition-colors">
                 Our Packages
               </Link>
             </li>
