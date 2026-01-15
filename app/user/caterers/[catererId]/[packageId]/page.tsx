@@ -76,6 +76,14 @@ export default function PackageDetailsPage() {
                     setError(response.error);
                 } else if (response.data?.data) {
                     const packageData = response.data.data;
+                    
+                    // Redirect user-created custom packages to My Packages page
+                    if (packageData.created_by === 'USER') {
+                        // This is a user-created package, redirect to My Packages
+                        router.replace(`/user/mypackages/${packageId}`);
+                        return;
+                    }
+                    
                     setPkg(packageData);
                     // Set default guests to the package's people_count
                     if (packageData.people_count) {
@@ -90,7 +98,7 @@ export default function PackageDetailsPage() {
         };
 
         fetchPackage();
-    }, [packageId]);
+    }, [packageId, router]);
 
     // Check for pending cart item on mount/login
     useEffect(() => {

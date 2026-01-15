@@ -193,5 +193,76 @@ export const authApi = {
       status: response.status,
     };
   },
+
+  updateUserProfile: async (formData: FormData) => {
+    const token = getAuthToken();
+    const url = `${API_BASE_URL}/api/auth/profile`;
+    
+    console.log('🚀 [API] Updating user profile');
+    console.log('🚀 [API] URL:', url);
+    console.log('🔑 [API] Has token:', !!token);
+    
+    const headers: Record<string, string> = {};
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    console.log('📤 [API] Sending request...');
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers,
+      body: formData,
+    });
+    
+    console.log('📡 [API] Response status:', response.status, response.statusText);
+
+    const responseText = await response.text();
+    
+    let data;
+    
+    try {
+      data = responseText ? JSON.parse(responseText) : null;
+      console.log('✅ [API] Response parsed as JSON successfully');
+    } catch (jsonError) {
+      console.log('❌ [API] Failed to parse response as JSON:', jsonError);
+      return {
+        error: responseText || `HTTP ${response.status}: ${response.statusText}`,
+        status: response.status,
+      };
+    }
+
+    if (!response.ok) {
+      let errorMessage = 'An error occurred';
+      
+      if (typeof data === 'string') {
+        errorMessage = data;
+      } else if (data?.message) {
+        errorMessage = typeof data.message === 'string' ? data.message : JSON.stringify(data.message);
+      } else if (data?.error) {
+        if (typeof data.error === 'string') {
+          errorMessage = data.error;
+        } else if (data.error?.message) {
+          errorMessage = typeof data.error.message === 'string' ? data.error.message : JSON.stringify(data.error.message);
+        } else {
+          errorMessage = JSON.stringify(data.error);
+        }
+      } else {
+        errorMessage = responseText || `HTTP ${response.status}: ${response.statusText}`;
+      }
+      
+      console.log('❌ [API] Error message:', errorMessage);
+      return {
+        error: errorMessage,
+        status: response.status,
+      };
+    }
+
+    console.log('✅ [API] Request successful!');
+    return { 
+      data,
+      status: response.status,
+    };
+  },
 };
 

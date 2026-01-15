@@ -57,6 +57,8 @@ export interface Package {
   rating?: number;
   is_available: boolean;
   customisation_type?: 'FIXED' | 'CUSTOMISABLE' | 'CUSTOMIZABLE';
+  created_by?: 'USER' | 'CATERER';
+  user_id?: string | null;
   additional_info?: string;
   items: any[];
   category_selections: any[];

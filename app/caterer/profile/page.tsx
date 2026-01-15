@@ -9,6 +9,15 @@ import { catererApi } from '@/lib/api/caterer.api';
 import { authApi } from '@/lib/api/auth.api';
 
 interface FormData {
+    // User profile fields
+    first_name: string;
+    last_name: string;
+    phone: string;
+    email: string;
+    company_name: string;
+    logo: File | null;
+    existing_logo_url: string;
+    // Caterer info fields
     business_name: string;
     business_type: string;
     business_description: string;
@@ -37,6 +46,15 @@ export default function CatererProfilePage() {
     const [submitSuccess, setSubmitSuccess] = useState('');
     
     const [formData, setFormData] = useState<FormData>({
+        // User profile fields
+        first_name: '',
+        last_name: '',
+        phone: '',
+        email: '',
+        company_name: '',
+        logo: null,
+        existing_logo_url: '',
+        // Caterer info fields
         business_name: '',
         business_type: '',
         business_description: '',
@@ -104,6 +122,15 @@ export default function CatererProfilePage() {
                 const apiResponse = response.data as any;
                 const info = apiResponse.success ? apiResponse.data : apiResponse;
                 setFormData({
+                    // User profile fields from user context
+                    first_name: user?.first_name || '',
+                    last_name: user?.last_name || '',
+                    phone: user?.phone || '',
+                    email: user?.email || '',
+                    company_name: user?.company_name || '',
+                    logo: null,
+                    existing_logo_url: user?.image_url || '',
+                    // Caterer info fields
                     business_name: info.business_name || '',
                     business_type: info.business_type || '',
                     business_description: info.business_description || '',
@@ -138,7 +165,8 @@ export default function CatererProfilePage() {
 
         try {
             // Validate required fields
-            if (!formData.business_name || !formData.business_type || !formData.business_description ||
+            if (!formData.first_name || !formData.last_name || !formData.phone || !formData.email ||
+                !formData.business_name || !formData.business_type || !formData.business_description ||
                 !formData.service_area || !formData.minimum_guests || !formData.maximum_guests ||
                 !formData.preparation_time || !formData.region) {
                 setSubmitError('Please fill in all required fields');
@@ -153,39 +181,61 @@ export default function CatererProfilePage() {
                 return;
             }
 
-            // Create FormData object
-            const submitFormData = new FormData();
-            submitFormData.append('business_name', formData.business_name);
-            submitFormData.append('business_type', formData.business_type);
-            submitFormData.append('business_description', formData.business_description);
-            submitFormData.append('service_area', formData.service_area);
-            submitFormData.append('minimum_guests', formData.minimum_guests);
-            submitFormData.append('maximum_guests', formData.maximum_guests);
-            submitFormData.append('preparation_time', formData.preparation_time);
-            submitFormData.append('region', formData.region);
-            submitFormData.append('delivery_only', formData.delivery_only.toString());
-            submitFormData.append('delivery_plus_setup', formData.delivery_plus_setup.toString());
-            submitFormData.append('full_service', formData.full_service.toString());
-            submitFormData.append('staff', formData.staff || '0');
-            submitFormData.append('servers', formData.servers || '0');
+            // Update user profile first
+            const userFormData = new FormData();
+            userFormData.append('first_name', formData.first_name);
+            userFormData.append('last_name', formData.last_name);
+            userFormData.append('phone', formData.phone);
+            userFormData.append('email', formData.email);
+            userFormData.append('company_name', formData.company_name || '');
+            
+            if (formData.logo) {
+                userFormData.append('image', formData.logo);
+            } else if (formData.existing_logo_url) {
+                userFormData.append('image_url', formData.existing_logo_url);
+            }
+
+            const userResponse = await authApi.updateUserProfile(userFormData);
+            
+            if (userResponse.error) {
+                setSubmitError(userResponse.error);
+                setIsSubmitting(false);
+                return;
+            }
+
+            // Update caterer info
+            const catererFormData = new FormData();
+            catererFormData.append('business_name', formData.business_name);
+            catererFormData.append('business_type', formData.business_type);
+            catererFormData.append('business_description', formData.business_description);
+            catererFormData.append('service_area', formData.service_area);
+            catererFormData.append('minimum_guests', formData.minimum_guests);
+            catererFormData.append('maximum_guests', formData.maximum_guests);
+            catererFormData.append('preparation_time', formData.preparation_time);
+            catererFormData.append('region', formData.region);
+            catererFormData.append('delivery_only', formData.delivery_only.toString());
+            catererFormData.append('delivery_plus_setup', formData.delivery_plus_setup.toString());
+            catererFormData.append('full_service', formData.full_service.toString());
+            catererFormData.append('staff', formData.staff || '0');
+            catererFormData.append('servers', formData.servers || '0');
             
             // Add files or existing URLs
             if (formData.food_license) {
-                submitFormData.append('food_license', formData.food_license);
+                catererFormData.append('food_license', formData.food_license);
             } else if (formData.existing_food_license_url) {
-                submitFormData.append('food_license', formData.existing_food_license_url);
+                catererFormData.append('food_license', formData.existing_food_license_url);
             }
             
             if (formData.registration) {
-                submitFormData.append('Registration', formData.registration);
+                catererFormData.append('Registration', formData.registration);
             } else if (formData.existing_registration_url) {
-                submitFormData.append('Registration', formData.existing_registration_url);
+                catererFormData.append('Registration', formData.existing_registration_url);
             }
 
-            const response = await catererApi.updateCatererInfo(submitFormData);
+            const catererResponse = await authApi.submitCatererInfo(catererFormData, true);
 
-            if (response.error) {
-                setSubmitError(response.error);
+            if (catererResponse.error) {
+                setSubmitError(catererResponse.error);
                 setIsSubmitting(false);
             } else {
                 setSubmitSuccess('Profile updated successfully!');
@@ -201,15 +251,23 @@ export default function CatererProfilePage() {
         }
     };
 
+    const logoInputRef = useRef<HTMLInputElement>(null);
     const foodLicenseInputRef = useRef<HTMLInputElement>(null);
     const registrationInputRef = useRef<HTMLInputElement>(null);
 
-    const validateAndSetFile = (file: File, type: 'food_license' | 'registration') => {
+    const validateAndSetFile = (file: File, type: 'food_license' | 'registration' | 'logo') => {
         setSubmitError('');
 
-        if (!['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
-            setSubmitError('Only PDF, PNG, or JPG files are allowed');
-            return false;
+        if (type === 'logo') {
+            if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+                setSubmitError('Logo must be PNG or JPG');
+                return false;
+            }
+        } else {
+            if (!['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+                setSubmitError('Only PDF, PNG, or JPG files are allowed');
+                return false;
+            }
         }
 
         if (file.size > 5 * 1024 * 1024) {
@@ -219,8 +277,10 @@ export default function CatererProfilePage() {
 
         if (type === 'food_license') {
             setFormData({ ...formData, food_license: file });
-        } else {
+        } else if (type === 'registration') {
             setFormData({ ...formData, registration: file });
+        } else if (type === 'logo') {
+            setFormData({ ...formData, logo: file });
         }
         return true;
     };
@@ -265,6 +325,99 @@ export default function CatererProfilePage() {
                     )}
 
                     <div className="space-y-6">
+                        {/* Logo Upload */}
+                        <div className="border-b pb-6">
+                            <h2 className="text-xl font-semibold text-gray-900 mb-4">Logo / Profile Picture</h2>
+                            
+                            <div className="flex items-center gap-6">
+                                {/* Logo Preview */}
+                                <div className="relative">
+                                    {formData.logo || formData.existing_logo_url ? (
+                                        <img
+                                            src={formData.logo ? URL.createObjectURL(formData.logo) : formData.existing_logo_url}
+                                            alt="Logo"
+                                            className="w-32 h-32 rounded-full object-cover border-4 border-gray-200"
+                                        />
+                                    ) : (
+                                        <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center">
+                                            <span className="text-4xl text-gray-400">
+                                                {formData.first_name?.[0] || user?.first_name?.[0] || '?'}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => logoInputRef.current?.click()}
+                                        className="px-4 py-2 bg-[#268700] text-white rounded-md hover:bg-[#1f6b00] transition"
+                                    >
+                                        {formData.logo || formData.existing_logo_url ? 'Change Logo' : 'Upload Logo'}
+                                    </button>
+                                    {(formData.logo || formData.existing_logo_url) && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, logo: null, existing_logo_url: '' })}
+                                            className="ml-3 px-4 py-2 text-red-600 hover:text-red-700 transition"
+                                        >
+                                            Remove
+                                        </button>
+                                    )}
+                                    <p className="text-xs text-gray-500 mt-2">PNG or JPG (max 5MB)</p>
+                                    <input
+                                        ref={logoInputRef}
+                                        type="file"
+                                        className="hidden"
+                                        accept=".png,.jpg,.jpeg"
+                                        onChange={(e) => {
+                                            if (e.target.files && e.target.files[0]) {
+                                                validateAndSetFile(e.target.files[0], 'logo');
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Personal Information */}
+                        <div className="border-b pb-6">
+                            <h2 className="text-xl font-semibold text-gray-900 mb-4">Personal Information</h2>
+                            
+                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                <Input 
+                                    label="First Name *" 
+                                    value={formData.first_name}
+                                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                                />
+                                <Input 
+                                    label="Last Name *" 
+                                    value={formData.last_name}
+                                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                <Input 
+                                    label="Phone *" 
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                />
+                                <Input 
+                                    label="Email *" 
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                />
+                            </div>
+
+                            <Input 
+                                label="Company Name" 
+                                value={formData.company_name}
+                                onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                            />
+                        </div>
+
                         {/* Business Information */}
                         <div className="border-b pb-6">
                             <h2 className="text-xl font-semibold text-gray-900 mb-4">Business Information</h2>

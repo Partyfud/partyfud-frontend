@@ -766,32 +766,4 @@ export const catererApi = {
       updated_at: string;
     }>(`/api/caterer/info`);
   },
-
-  // Update caterer info for the authenticated caterer
-  updateCatererInfo: async (data: FormData) => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/api/auth/caterer-info`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: data,
-    });
-
-    const responseData = await response.json();
-
-    if (!response.ok) {
-      return {
-        data: null,
-        error: responseData.error?.message || 'Failed to update caterer info',
-        status: response.status,
-      };
-    }
-
-    return {
-      data: responseData,
-      error: null,
-      status: response.status,
-    };
-  },
 };

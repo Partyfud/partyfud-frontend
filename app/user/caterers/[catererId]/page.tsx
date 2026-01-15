@@ -1,139 +1,211 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import Image from 'next/image';
-import {
-  Star,
-  Users,
-  Truck,
-  Clock,
-  Check,
-  ChevronRight,
-  MapPin,
-  Calendar,
-  X,
-  Info
-} from 'lucide-react';
-import { userApi, type Package, type Occasion } from '@/lib/api/user.api';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { userApi, type Caterer, type Package, type Dish } from '@/lib/api/user.api';
+import { Check, Plus, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
-function CatererMenuContent() {
-  const [activeTab, setActiveTab] = useState('setMenusFixed');
-  const [caterer, setCaterer] = useState<any>(null);
+type TabType = 'setMenus' | 'buildYourOwn' | 'customiseMenu';
+type DietaryFilter = 'veg' | 'glutenFree' | 'nonVeg' | 'sugarFree' | null;
+
+interface CategoryGroup {
+  categoryName: string;
+  dishes: Dish[];
+  maxSelections?: number;
+}
+
+export default function CatererMenuPage() {
+  const { catererId } = useParams<{ catererId: string }>();
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const [caterer, setCaterer] = useState<Caterer | null>(null);
   const [packages, setPackages] = useState<Package[]>([]);
+  const [dishes, setDishes] = useState<Dish[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [occasions, setOccasions] = useState<Occasion[]>([]);
-
-  // Event Details State
-  const [selectedEventType, setSelectedEventType] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState('');
-  const [guestCount, setGuestCount] = useState<number>(20);
-  const [eventDate, setEventDate] = useState('');
-
-  // Menu Selection State
+  const [activeTab, setActiveTab] = useState<TabType>('setMenus');
+  const [buildYourOwnSubTab, setBuildYourOwnSubTab] = useState<'fixed' | 'customizable'>('fixed');
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
-  const [selectedDishIds, setSelectedDishIds] = useState<Set<string>>(new Set());
-  const [loadingItems, setLoadingItems] = useState(false);
+  const [guestCount, setGuestCount] = useState<number>(50);
   const [addingToCart, setAddingToCart] = useState(false);
-  const [cartMessage, setCartMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  // Build Your Own State
-  const [dishes, setDishes] = useState<any[]>([]);
   const [selectedDishes, setSelectedDishes] = useState<Set<string>>(new Set());
+  const [dietaryFilter, setDietaryFilter] = useState<DietaryFilter>(null);
   const [loadingDishes, setLoadingDishes] = useState(false);
-  const [dietaryFilter, setDietaryFilter] = useState<string | null>(null);
 
-  // Proposal State
-  const [proposalGuestCount, setProposalGuestCount] = useState<number>(20);
-  const [proposalEventType, setProposalEventType] = useState('');
-  const [proposalLocation, setProposalLocation] = useState('');
-  const [proposalEventDate, setProposalEventDate] = useState('');
-  const [budgetPerPerson, setBudgetPerPerson] = useState('');
-  const [selectedDietaryPreferences, setSelectedDietaryPreferences] = useState<Set<string>>(new Set());
-  const [vision, setVision] = useState('');
+  // Event details form states (for Set Menus tab)
+  const [eventType, setEventType] = useState<string>('');
+  const [location, setLocation] = useState<string>('');
+  const [eventDate, setEventDate] = useState<string>('');
+  const [occasions, setOccasions] = useState<Array<{ id: string; name: string }>>([]);
+  const [loadingOccasions, setLoadingOccasions] = useState(false);
+
+  // Custom Proposal Form States
+  const [proposalGuestCount, setProposalGuestCount] = useState<number>(50);
+  const [proposalEventType, setProposalEventType] = useState<string>('');
+  const [proposalLocation, setProposalLocation] = useState<string>('12/345 Business Bay');
+  const [selectedDietaryPreferences, setSelectedDietaryPreferences] = useState<Set<string>>(new Set(['Gluten Free', 'Sugar Free']));
+  const [budgetPerPerson, setBudgetPerPerson] = useState<string>('AED 12');
+  const [proposalEventDate, setProposalEventDate] = useState<string>('2024-12-12');
+  const [vision, setVision] = useState<string>('');
   const [submittingProposal, setSubmittingProposal] = useState(false);
   const [showProposalSuccessModal, setShowProposalSuccessModal] = useState(false);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const params = useParams();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { user } = useAuth();
-  const catererId = params.catererId as string;
-
-  // Initial Data Fetch
+  // Auto-hide notification after 5 seconds
   useEffect(() => {
-    const fetchCatererData = async () => {
-      try {
-        setLoading(true);
-        const [catererRes, occasionsRes, packagesRes] = await Promise.all([
-          userApi.getCatererById(catererId),
-          userApi.getOccasions(),
-          userApi.getPackagesByCatererId(catererId)
-        ]);
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
-        if (catererRes.data?.data) {
-          setCaterer(catererRes.data.data);
-        }
-        if (packagesRes.data?.data) {
-          setPackages(packagesRes.data.data);
-        }
-        if (occasionsRes.data?.data) {
-          setOccasions(occasionsRes.data.data);
+  // Fetch occasions
+  useEffect(() => {
+    const fetchOccasions = async () => {
+      setLoadingOccasions(true);
+      try {
+        const response = await userApi.getOccasions();
+        if (response.data?.data) {
+          setOccasions(response.data.data);
         }
       } catch (err) {
-        console.error('Error fetching data:', err);
-        setError('Failed to fetch caterer details');
+        console.error('Error fetching occasions:', err);
+      } finally {
+        setLoadingOccasions(false);
+      }
+    };
+    fetchOccasions();
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!catererId) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        // Fetch caterer and packages in parallel
+        const [catererResponse, packagesResponse] = await Promise.all([
+          userApi.getCatererById(catererId),
+          userApi.getPackagesByCatererId(catererId),
+        ]);
+
+        if (catererResponse.error) {
+          setError(catererResponse.error);
+        } else if (catererResponse.data?.data) {
+          setCaterer(catererResponse.data.data);
+        }
+
+        if (packagesResponse.error) {
+          console.error('Error fetching packages:', packagesResponse.error);
+        } else if (packagesResponse.data?.data) {
+          const fetchedPackages = packagesResponse.data.data;
+          setPackages(fetchedPackages);
+          // Auto-select first package if available
+          if (fetchedPackages.length > 0) {
+            setSelectedPackage(fetchedPackages[0]);
+            setGuestCount(fetchedPackages[0].people_count);
+          }
+        }
+      } catch (err) {
+        setError('Failed to fetch data');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCatererData();
+    fetchData();
   }, [catererId]);
 
-  // Read query params
-  useEffect(() => {
-    const guests = searchParams.get('guests');
-    const eventType = searchParams.get('eventType');
-    const location = searchParams.get('location');
-    const date = searchParams.get('date');
+  // Format menu items for display
+  const formatMenuItems = (pkg: Package) => {
+    if (!pkg.items || pkg.items.length === 0) {
+      return {
+        welcomeDrink: 'Not specified',
+        starter: 'Not specified',
+        main: 'Not specified',
+        sides: 'Not specified',
+        dessert: 'Not specified',
+      };
+    }
 
-    if (guests) {
-      const val = parseInt(guests);
-      if (!isNaN(val)) {
-        setGuestCount(val);
-        setProposalGuestCount(val);
-      } else {
-        setGuestCount(0);
-        setProposalGuestCount(0);
+    const items = pkg.items.map((item: any) => ({
+      name: item.dish?.name || 'Unknown',
+      category: item.dish?.category?.name || item.dish?.category || 'Other',
+      isOptional: item.is_optional,
+    }));
+
+    // Group by category and find typical items
+    const categories: { [key: string]: string[] } = {};
+    items.forEach((item) => {
+      if (!categories[item.category]) {
+        categories[item.category] = [];
       }
-    }
-    if (eventType) {
-      setSelectedEventType(eventType);
-      setProposalEventType(eventType);
-    }
-    if (location) {
-      setSelectedLocation(location);
-      setProposalLocation(location);
-    }
-    if (date) {
-      setEventDate(date);
-      setProposalEventDate(date);
-    }
-  }, [searchParams]);
+      categories[item.category].push(item.name);
+    });
 
-  // Fetch dishes for Build Your Own
+    // Try to identify items by category name patterns
+    const getItemsByPattern = (patterns: string[]) => {
+      for (const pattern of patterns) {
+        const category = Object.keys(categories).find(cat =>
+          cat.toLowerCase().includes(pattern.toLowerCase())
+        );
+        if (category && categories[category].length > 0) {
+          return categories[category].join(', ');
+        }
+      }
+      return null;
+    };
+
+    const welcomeDrink = getItemsByPattern(['drink', 'beverage', 'welcome']) ||
+      categories['Beverages']?.[0] ||
+      items.find(i => i.name.toLowerCase().includes('drink') || i.name.toLowerCase().includes('lemonade') || i.name.toLowerCase().includes('tea'))?.name ||
+      'Not specified';
+
+    const starter = getItemsByPattern(['starter', 'appetizer', 'mezze']) ||
+      categories['Starters']?.[0] ||
+      categories['Appetizers']?.[0] ||
+      items.find(i => i.name.toLowerCase().includes('starter') || i.name.toLowerCase().includes('mezze') || i.name.toLowerCase().includes('bruschetta'))?.name ||
+      'Not specified';
+
+    const main = getItemsByPattern(['main', 'entree', 'course']) ||
+      categories['Main Course']?.[0] ||
+      categories['Mains']?.[0] ||
+      items.find(i => !i.name.toLowerCase().includes('drink') && !i.name.toLowerCase().includes('starter') && !i.name.toLowerCase().includes('dessert') && !i.name.toLowerCase().includes('side'))?.name ||
+      'Not specified';
+
+    const sides = getItemsByPattern(['side', 'accompaniment']) ||
+      categories['Sides']?.[0] ||
+      categories['Accompaniments']?.[0] ||
+      items.filter(i => i.name.toLowerCase().includes('rice') || i.name.toLowerCase().includes('salad') || i.name.toLowerCase().includes('bread')).map(i => i.name).join(', ') ||
+      'Not specified';
+
+    const dessert = getItemsByPattern(['dessert', 'sweet']) ||
+      categories['Desserts']?.[0] ||
+      categories['Sweets']?.[0] ||
+      items.find(i => i.name.toLowerCase().includes('dessert') || i.name.toLowerCase().includes('tiramisu') || i.name.toLowerCase().includes('baklava') || i.name.toLowerCase().includes('churros'))?.name ||
+      'Not specified';
+
+    return { welcomeDrink, starter, main, sides, dessert };
+  };
+
+  // Fetch dishes when Build Your Own tab is active
   useEffect(() => {
     const fetchDishes = async () => {
-      if (activeTab !== 'buildYourOwn' || dishes.length > 0) return;
+      if (!catererId || activeTab !== 'buildYourOwn') return;
 
       setLoadingDishes(true);
       try {
         const response = await userApi.getDishesByCatererId(catererId);
-        if (response.data?.data) {
+        if (response.error) {
+          console.error('Error fetching dishes:', response.error);
+        } else if (response.data?.data) {
           setDishes(response.data.data);
         }
       } catch (err) {
@@ -144,807 +216,1217 @@ function CatererMenuContent() {
     };
 
     fetchDishes();
-  }, [activeTab, catererId, dishes.length]);
+  }, [catererId, activeTab]);
 
-  const computeInitialSelection = (pkg: Package) => {
-    const dishIds = new Set<string>();
-    const categoryCounts: { [key: string]: number } = {};
-    const items = pkg.items || [];
-    const isCustomisable = pkg.customisation_type === 'FIXED'; // Underlying FIXED is labeled Customisable in Dashboard
+  // Group dishes by category
+  const groupDishesByCategory = (): CategoryGroup[] => {
+    const grouped: { [key: string]: Dish[] } = {};
 
-    items.forEach(item => {
-      const dishId = item.dish?.id;
-      if (!dishId) return;
+    let filteredDishes = dishes;
 
-      if (isCustomisable) {
-        const categoryName = (item.dish?.category?.name || item.dish?.category || 'Uncategorized').toLowerCase();
-        const selection = pkg.category_selections?.find(
-          s => (s.category?.name || s.category).toLowerCase() === categoryName
-        );
-        const limit = selection?.num_dishes_to_select;
-
-        if (limit !== null && limit !== undefined) {
-          const currentCount = categoryCounts[categoryName] || 0;
-          if (currentCount < limit) {
-            dishIds.add(dishId);
-            categoryCounts[categoryName] = currentCount + 1;
-          }
-        } else {
-          // If no limit specified for a category in a customisable package, 
-          // we might want to select all or none. Let's select all by default.
-          dishIds.add(dishId);
-        }
-      } else {
-        // FIXED packages have all items included by default
-        dishIds.add(dishId);
-      }
-    });
-
-    return dishIds;
-  };
-
-  const handlePackageSelect = async (pkg: Package) => {
-    setSelectedPackage(pkg);
-    setSelectedDishIds(computeInitialSelection(pkg));
-    setLoadingItems(true);
-
-    try {
-      const response = await userApi.getPackageById(pkg.id);
-      if (response.data?.data) {
-        const fullPkg = response.data.data;
-        setSelectedPackage(fullPkg);
-        setSelectedDishIds(computeInitialSelection(fullPkg));
-      }
-    } catch (err) {
-      console.error('Error fetching full package details:', err);
-    } finally {
-      setLoadingItems(false);
+    // Apply dietary filter (simplified - you may need to add dietary info to dishes)
+    if (dietaryFilter === 'veg') {
+      // Filter vegetarian dishes (you'll need to add this field to your dish model)
+      filteredDishes = dishes.filter(d => {
+        const name = d.name.toLowerCase();
+        return !name.includes('chicken') && !name.includes('beef') && !name.includes('lamb') &&
+          !name.includes('pork') && !name.includes('fish') && !name.includes('meat');
+      });
+    } else if (dietaryFilter === 'nonVeg') {
+      filteredDishes = dishes.filter(d => {
+        const name = d.name.toLowerCase();
+        return name.includes('chicken') || name.includes('beef') || name.includes('lamb') ||
+          name.includes('pork') || name.includes('fish') || name.includes('meat');
+      });
     }
 
-    setTimeout(() => {
-      const el = document.getElementById('menu-items-section');
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
-  };
-
-  const toggleCustomDishSelection = (dishId: string) => {
-    const newSelection = new Set(selectedDishes);
-    if (newSelection.has(dishId)) {
-      newSelection.delete(dishId);
-    } else {
-      newSelection.add(dishId);
-    }
-    setSelectedDishes(newSelection);
-  };
-
-  const groupDishesByCategory = () => {
-    const categories: { [key: string]: any[] } = {};
-    dishes.forEach(dish => {
-      const catName = dish.category?.name || 'Uncategorized';
-      if (!categories[catName]) categories[catName] = [];
-      categories[catName].push(dish);
+    filteredDishes.forEach((dish) => {
+      const categoryName = dish.category?.name || 'Other';
+      if (!grouped[categoryName]) {
+        grouped[categoryName] = [];
+      }
+      grouped[categoryName].push(dish);
     });
 
-    return Object.entries(categories).map(([name, dishes]) => ({
-      categoryName: name,
-      dishes
-    }));
+    // Convert to array - allow multiple selections
+    return Object.entries(grouped).map(([categoryName, categoryDishes]) => {
+      return {
+        categoryName,
+        dishes: categoryDishes,
+        maxSelections: undefined, // No limit - allow multiple selections
+      };
+    });
   };
 
-  const toggleDishSelection = (dishId: string, categoryName: string) => {
-    if (!selectedPackage) return;
+  // Toggle dish selection
+  const toggleDishSelection = (dishId: string, categoryGroup: CategoryGroup) => {
+    const newSelected = new Set(selectedDishes);
 
-    const isCustomisable = selectedPackage.customisation_type === 'FIXED';
-    if (!isCustomisable) return;
-
-    const newSelected = new Set(selectedDishIds);
+    // Check if dish is already selected
     if (newSelected.has(dishId)) {
       newSelected.delete(dishId);
     } else {
-      const selection = selectedPackage.category_selections?.find(
-        cs => (cs.category?.name || cs.category).toLowerCase() === categoryName.toLowerCase()
-      );
-      const limit = selection?.num_dishes_to_select;
-
-      if (limit !== null && limit !== undefined) {
-        const currentCount = Array.from(newSelected).filter(id => {
-          const item = (selectedPackage.items || []).find(i => i.dish?.id === id);
-          return (item?.dish?.category?.name || item?.dish?.category)?.toLowerCase() === categoryName.toLowerCase();
-        }).length;
-
-        if (currentCount >= limit) {
-          setCartMessage({ type: 'error', text: `You can only select ${limit} ${limit === 1 ? 'item' : 'items'} from ${categoryName}` });
-          setTimeout(() => setCartMessage(null), 3000);
-          return;
-        }
-      }
+      // Allow multiple selections - no limit
       newSelected.add(dishId);
     }
-    setSelectedDishIds(newSelected);
+
+    setSelectedDishes(newSelected);
   };
 
-  const handleAddToCart = async () => {
-    if (!user) {
-      router.push(`/login?redirect=/user/caterers/${catererId}`);
-      return;
-    }
+  // Check if dish is selected
+  const isDishSelected = (dishId: string) => {
+    return selectedDishes.has(dishId);
+  };
 
+  // Calculate total price for Build Your Own
+  const calculateBuildYourOwnTotal = () => {
+    let total = 0;
+    selectedDishes.forEach((dishId) => {
+      const dish = dishes.find(d => d.id === dishId);
+      if (dish) {
+        // Dish price is the total price, not per person
+        total += Number(dish.price);
+      }
+    });
+    return total;
+  };
+
+  // Calculate total price
+  const calculateTotal = () => {
     if (activeTab === 'buildYourOwn') {
-      if (selectedDishes.size === 0) {
-        setCartMessage({ type: 'error', text: 'Please select at least one dish' });
+      return calculateBuildYourOwnTotal();
+    }
+    if (!selectedPackage) return 0;
+    const pricePerPerson = selectedPackage.price_per_person;
+    return pricePerPerson * guestCount;
+  };
+
+  // Handle add to cart
+  const handleAddToCart = async () => {
+    if (activeTab === 'buildYourOwn') {
+      if (selectedDishes.size === 0 || !catererId) return;
+
+      // Check if user is authenticated
+      if (!user) {
+        setNotification({ type: 'error', message: 'You must be logged in to create a package. Please log in and try again.' });
+        setTimeout(() => router.push('/login'), 2000);
         return;
       }
+
       setAddingToCart(true);
       try {
+        // Convert selected dishes Set to array
+        const dishIds = Array.from(selectedDishes);
+
+        // Create custom package
         const response = await userApi.createCustomPackage({
-          dish_ids: Array.from(selectedDishes),
+          dish_ids: dishIds,
           people_count: guestCount,
-          name: `Custom Menu - ${caterer?.name || 'Caterer'}`
         });
 
-        if (response.data?.data) {
-          setCartMessage({ type: 'success', text: 'Package created successfully!' });
-          setTimeout(() => router.push('/user/mypackages'), 1500);
-        } else {
-          setCartMessage({ type: 'error', text: response.error || 'Failed to create package' });
+        if (response.error) {
+          // Check if it's an authentication error
+          if (response.status === 401 || response.error.includes('Unauthorized') || response.error.includes('401')) {
+            setNotification({ type: 'error', message: 'Your session has expired. Please log in again.' });
+            setTimeout(() => router.push('/login'), 2000);
+            return;
+          }
+          setNotification({ type: 'error', message: response.error || 'Failed to create custom package. Please try again.' });
+          return;
         }
-      } catch (err) {
-        setCartMessage({ type: 'error', text: 'An unexpected error occurred' });
+
+        if (response.data?.success && response.data?.data) {
+          // Show success message and redirect to package details page
+          const newPackageId = response.data?.data?.id;
+          setNotification({ type: 'success', message: 'Package created successfully! Redirecting...' });
+          if (newPackageId) {
+            setTimeout(() => router.push(`/user/mypackages/${newPackageId}`), 1500);
+          } else {
+            setTimeout(() => router.push('/user/mypackages'), 1500);
+          }
+        } else if (response.data?.data) {
+          // Handle case where success might not be in response but data exists
+          const newPackageId = response.data?.data?.id;
+          setNotification({ type: 'success', message: 'Package created successfully! Redirecting...' });
+          if (newPackageId) {
+            setTimeout(() => router.push(`/user/mypackages/${newPackageId}`), 1500);
+          } else {
+            setTimeout(() => router.push('/user/mypackages'), 1500);
+          }
+        } else {
+          setNotification({ type: 'error', message: 'Failed to create custom package. Please try again.' });
+        }
+      } catch (err: any) {
+        console.error('Error creating custom package:', err);
+        // Check if it's an authentication error
+        if (err?.message?.includes('401') || err?.message?.includes('Unauthorized')) {
+          setNotification({ type: 'error', message: 'Your session has expired. Please log in again.' });
+          setTimeout(() => router.push('/login'), 2000);
+        } else {
+          setNotification({ type: 'error', message: err?.message || 'Failed to create custom package. Please try again.' });
+        }
       } finally {
         setAddingToCart(false);
       }
-      return;
-    }
+    } else {
+      if (!selectedPackage || !catererId) return;
 
-    if (!selectedPackage || !selectedLocation || !eventDate || !guestCount) {
-      setCartMessage({ type: 'error', text: 'Please complete event details and select a package' });
-      return;
-    }
-
-    // Validate category selections for CUSTOMISABLE packages
-    const isCustomisable = selectedPackage.customisation_type === 'FIXED';
-    if (isCustomisable) {
-      for (const selection of (selectedPackage.category_selections || [])) {
-        const categoryName = selection.category?.name || selection.category;
-        const limit = selection.num_dishes_to_select;
-        if (limit !== null && limit !== undefined) {
-          const selectedInCategory = Array.from(selectedDishIds).filter(id => {
-            const item = (selectedPackage.items || []).find(i => i.dish?.id === id);
-            return (item?.dish?.category?.name || item?.dish?.category)?.toLowerCase() === categoryName.toLowerCase();
-          }).length;
-
-          if (selectedInCategory < limit) {
-            setCartMessage({ type: 'error', text: `Please select exactly ${limit} items from ${categoryName}` });
-            return;
-          }
-        }
-      }
-    }
-
-    setAddingToCart(true);
-    try {
-      const dateObj = new Date(eventDate);
-      dateObj.setHours(18, 0, 0, 0);
-
-      // Use package's inherent package_type_id, NOT the selected occasion/event type ID
-      const packageTypeId = selectedPackage.package_type?.id;
-      if (!packageTypeId) {
-        setCartMessage({ type: 'error', text: 'Package type information is missing' });
-        setAddingToCart(false);
+      // Validate required fields
+      if (!eventType || !location || !eventDate) {
+        setNotification({ type: 'error', message: 'Please fill in all event details (Event Type, Location, and Date) before proceeding.' });
         return;
       }
 
-      const response = await userApi.createCartItem({
-        package_id: selectedPackage.id,
-        package_type_id: packageTypeId,
-        location: selectedLocation,
-        guests: guestCount,
-        date: dateObj.toISOString(),
-        price_at_time: (Number(selectedPackage.total_price) / selectedPackage.people_count) * guestCount,
-      });
-
-      if (response.data?.success) {
-        setCartMessage({ type: 'success', text: 'Added to cart successfully!' });
-        setTimeout(() => router.push('/user/cart'), 1500);
-      } else {
-        setCartMessage({ type: 'error', text: response.error || 'Failed to add to cart' });
+      setAddingToCart(true);
+      try {
+        // Navigate to package details page with all form data as query params
+        const params = new URLSearchParams({
+          guests: guestCount.toString(),
+          eventType: eventType,
+          location: location,
+          date: eventDate,
+        });
+        router.push(`/user/caterers/${catererId}/${selectedPackage.id}?${params.toString()}`);
+      } catch (err) {
+        console.error('Error navigating to package:', err);
+      } finally {
+        setAddingToCart(false);
       }
-    } catch (err) {
-      setCartMessage({ type: 'error', text: 'An unexpected error occurred' });
-    } finally {
-      setAddingToCart(false);
     }
   };
 
+  // Get logo info
+  const getLogoInfo = (name: string) => {
+    const words = name.split(' ');
+    const logoText = words.length > 1
+      ? words[0].substring(0, 5).toUpperCase()
+      : name.substring(0, 5).toUpperCase();
+    return { logoText };
+  };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>;
-  if (!caterer) return <div className="min-h-screen flex items-center justify-center">Caterer not found</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#268700] mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const logoText = caterer.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 5);
+  if (error || !caterer) {
+    return (
+      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+        <p className="text-gray-500">{error || 'Caterer not found.'}</p>
+      </div>
+    );
+  }
 
-  // Group items by category for the menu selection section
-  const groupedItems = selectedPackage ? (selectedPackage.items || []).reduce((acc: any, item) => {
-    const categoryName = item.dish?.category?.name || item.dish?.category || 'Uncategorized';
-    if (!acc[categoryName]) acc[categoryName] = [];
-    acc[categoryName].push(item);
-    return acc;
-  }, {}) : {};
+  const { logoText } = getLogoInfo(caterer.name);
 
   return (
-    <div className="bg-[#FAFAFA] min-h-screen pb-24">
-      <div className="max-w-7xl mx-auto px-6 pt-6">
-        {/* Breadcrumb */}
-        <div className="text-sm text-gray-500 mb-6 font-medium">
-          <Link href="/user/packages" className="hover:text-[#268700]">Menu</Link> / <span className="text-gray-900">Package Details</span>
-        </div>
-
-        {/* Caterer Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 mb-8 flex items-start gap-8">
-          <div className="bg-blue-600 text-white flex items-center justify-center rounded-xl font-bold text-2xl w-32 h-32 flex-shrink-0">
-            {logoText}
-          </div>
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{caterer.name}</h1>
-            <div className="flex gap-2 mb-4 flex-wrap">
-              {caterer.cuisines?.map((cuisine: string) => (
-                <span key={cuisine} className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium">
-                  {cuisine}
-                </span>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-6 text-sm text-gray-600 mb-4">
-              <div className="flex items-center gap-1.5 border-r pr-6 border-gray-200">
-                <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                <span className="font-bold text-gray-900">4.8</span>
-                <span className="text-gray-400 font-medium">(89 reviews)</span>
-              </div>
-
-              <div className="flex items-center gap-2 border-r pr-6 border-gray-200">
-                <Users className="w-4 h-4 text-gray-400" />
-                <span className="font-medium">{(caterer as any).minimum_guests || 10} - {(caterer as any).maximum_guests || 300} guests</span>
-              </div>
-
-              <div className="flex items-center gap-2 border-r pr-6 border-gray-200">
-                <Truck className="w-4 h-4 text-gray-400" />
-                <span className="font-medium">
-                  {(caterer as any).full_service ? 'Full service' :
-                    (caterer as any).delivery_plus_setup ? 'Delivery & Setup' : 'Delivery only'}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-gray-400" />
-                <span className="font-medium">Responds &lt; 4 hours</span>
-              </div>
-            </div>
-
-            <p className="text-gray-600 text-sm leading-relaxed max-w-4xl mb-4 italic">
-              {caterer.description || 'Award-winning catering service specializing in high-quality food and impeccable service for your events.'}
-            </p>
-
-            <div className="text-lg font-bold text-gray-900">
-              {caterer.priceRange}
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
-          <div className="flex">
-            {[
-              { id: 'setMenusFixed', label: 'Set Menus (Fixed)' },
-              { id: 'setMenusCustomisable', label: 'Set Menus (Customisable)' },
-              { id: 'buildYourOwn', label: 'Build Your Own' },
-              { id: 'customiseMenu', label: 'Customise Menu' }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  setSelectedPackage(null); // Reset selection when tab changes
-                }}
-                className={`flex-1 py-4 text-xs font-bold transition-all border-b-2 ${activeTab === tab.id
-                  ? 'border-[#268700] text-white bg-[#268700]'
-                  : 'border-transparent text-gray-400 hover:text-gray-700 hover:bg-gray-50'
-                  }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
-          {/* Main List */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-              {(activeTab === 'setMenusFixed' || activeTab === 'setMenusCustomisable') && (
-                <>
-                  <h2 className="text-xl font-bold text-gray-900 mb-6">Select Package</h2>
-
-                  <div className="mb-6">
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-6">
-                      {activeTab === 'setMenusFixed' ? 'Fixed Set Menus' : 'Customisable Set Menus'}
-                    </h3>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {packages.filter(pkg => {
-                        if (activeTab === 'setMenusFixed') return (pkg.customisation_type || '').includes('CUSTOM');
-                        if (activeTab === 'setMenusCustomisable') return pkg.customisation_type === 'FIXED';
-                        return false;
-                      }).map((pkg) => (
-                        <div
-                          key={pkg.id}
-                          onClick={() => handlePackageSelect(pkg)}
-                          className={`relative p-6 rounded-xl border-2 transition-all cursor-pointer ${selectedPackage?.id === pkg.id
-                            ? 'border-[#268700] bg-green-50/10'
-                            : 'border-gray-100 hover:border-gray-200'
-                            }`}
-                        >
-                          <h4 className="font-bold text-gray-900 mb-1 pr-6">{pkg.name}</h4>
-                          <p className="text-xs text-gray-400 mb-4">{pkg.package_type?.name || 'Package'}</p>
-
-                          <div className="space-y-2 mb-6">
-                            {(pkg.items?.length > 0
-                              ? Object.entries(
-                                (pkg.items || []).reduce((acc: any, item) => {
-                                  const catName = item.dish?.category?.name || item.dish?.category || 'Menu';
-                                  if (!acc[catName]) acc[catName] = [];
-                                  acc[catName].push(item);
-                                  return acc;
-                                }, {})
-                              )
-                              : (pkg.category_selections || []).map(cs => [cs.category?.name || cs.category_name, []])
-                            ).slice(0, 4).map((entry: any) => {
-                              const catName = entry[0] as string;
-                              const items = entry[1] as any[];
-                              return (
-                                <div key={catName} className="flex gap-2 text-xs">
-                                  <span className="font-bold text-gray-900 shrink-0">{catName}:</span>
-                                  <span className="text-gray-500 truncate">
-                                    {items.length > 0
-                                      ? items.slice(0, 2).map((i: any) => i.dish?.name).join(', ') + (items.length > 2 ? ', ...' : '')
-                                      : 'Items included'}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          <div className="pt-4 border-t border-gray-100">
-                            <div className="font-bold text-gray-900 mb-1">AED {pkg.price_per_person}/person</div>
-                            {pkg.additional_info && (
-                              <p className="text-[10px] text-gray-500 mt-2 line-clamp-2 italic">
-                                {pkg.additional_info}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {selectedPackage && (
-                    <div id="menu-items-section" className="mt-12 pt-8 border-t border-gray-100 animate-in fade-in duration-500">
-                      <div className="bg-white border border-gray-200 rounded-xl p-4">
-                        <h3 className="font-medium mb-2">
-                          Menu Items {selectedPackage.customisation_type === 'FIXED' ? '(Select Items)' : '(Included)'}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-4">
-                          Package includes {(selectedPackage.items || []).length} items for {selectedPackage.people_count} people.
-                        </p>
-
-                        {loadingItems ? (
-                          <div className="py-20 flex flex-col items-center justify-center gap-4">
-                            <div className="w-8 h-8 border-4 border-green-200 border-t-[#268700] rounded-full animate-spin" />
-                            <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Loading Items...</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-0 border border-gray-200 rounded-lg overflow-hidden">
-                            {Object.entries(groupedItems).map(([category, items]: [string, any]) => {
-                              const selection = selectedPackage.category_selections?.find(s => (s.category?.name || s.category).toLowerCase() === category.toLowerCase());
-                              const categoryLimit = selection?.num_dishes_to_select;
-                              const selectedInCategory = Array.from(selectedDishIds).filter(id => {
-                                const item = (selectedPackage.items || []).find(i => i.dish?.id === id);
-                                return (item?.dish?.category?.name || item?.dish?.category)?.toLowerCase() === category.toLowerCase();
-                              }).length;
-
-                              return (
-                                <div key={category} className="mb-0">
-                                  <div className="bg-gray-100 py-2 px-4 font-semibold text-gray-900 flex items-center justify-between">
-                                    <span className="text-sm">{category}</span>
-                                    {selectedPackage.customisation_type === 'FIXED' && categoryLimit !== null && (
-                                      <span className="text-xs font-normal text-gray-600">{selectedInCategory} / {categoryLimit} selected</span>
-                                    )}
-                                  </div>
-                                  <div className="bg-white">
-                                    {items.map((item: any) => {
-                                      const dishId = item.dish?.id;
-                                      const isSelected = selectedDishIds.has(dishId);
-                                      const isCustomisable = selectedPackage.customisation_type === 'FIXED';
-                                      const isAtLimit = isCustomisable && categoryLimit !== null && selectedInCategory >= categoryLimit && !isSelected;
-
-                                      return (
-                                        <div
-                                          key={item.id}
-                                          onClick={() => isCustomisable && !isAtLimit && toggleDishSelection(dishId, category)}
-                                          className={`py-3 px-4 border-b border-gray-200 last:border-b-0 ${isCustomisable && !isAtLimit ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'} ${isSelected ? 'bg-green-50/50' : ''} ${isAtLimit ? 'opacity-50' : ''}`}
-                                        >
-                                          <div className="flex items-center justify-between">
-                                            <span className="text-sm text-gray-700 font-medium">{item.dish?.name} {item.quantity > 1 && <span className="text-gray-500 ml-2">(x{item.quantity})</span>}</span>
-                                            {isCustomisable && (
-                                              <div className="ml-4">
-                                                {isSelected ? <Check className="w-5 h-5 text-[#268700]" /> : <div className={`w-5 h-5 border-2 rounded ${isAtLimit ? 'border-gray-200' : 'border-gray-300'}`} />}
-                                              </div>
-                                            )}
-                                          </div>
-                                          {item.dish?.description && <p className="text-xs text-gray-400 mt-1">{item.dish.description}</p>}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {selectedPackage.additional_info && (
-                          <div className="mt-4 p-4 bg-gray-50/80 rounded-xl border border-dashed border-gray-200">
-                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                              <Info size={14} className="text-[#268700]" />
-                              Caterer's Notes & Add-ons
-                            </h4>
-                            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line italic">
-                              {selectedPackage.additional_info}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {activeTab === 'buildYourOwn' && (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <div className="bg-green-50 border border-green-100 rounded-[1.5rem] p-6 mb-8">
-                    <h3 className="text-sm font-black text-green-900 uppercase tracking-widest mb-2">Build Your Own</h3>
-                    <p className="text-sm text-green-700/80 leading-relaxed">Select individual items from our full kitchen to create a unique experience.</p>
-                  </div>
-
-                  {loadingDishes ? (
-                    <div className="py-20 flex flex-col items-center justify-center gap-4">
-                      <div className="w-8 h-8 border-4 border-green-200 border-t-[#268700] rounded-full animate-spin" />
-                      <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Global Menu Sync...</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-8">
-                      {groupDishesByCategory().map((group) => (
-                        <div key={group.categoryName}>
-                          <h4 className="font-black text-gray-900 mb-4 text-sm uppercase tracking-widest">{group.categoryName}</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {group.dishes.map((dish) => {
-                              const isSelected = selectedDishes.has(dish.id);
-                              return (
-                                <div
-                                  key={dish.id}
-                                  onClick={() => toggleCustomDishSelection(dish.id)}
-                                  className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex justify-between items-center ${isSelected ? 'border-[#268700] bg-green-50/20' : 'border-gray-50 hover:border-gray-100'}`}
-                                >
-                                  <div>
-                                    <p className="font-bold text-sm text-gray-900">{dish.name}</p>
-                                    <p className="text-[10px] font-bold text-[#268700] uppercase tracking-widest">AED {dish.price}/person</p>
-                                  </div>
-                                  <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-[#268700] border-[#268700]' : 'border-gray-200'}`}>
-                                    {isSelected && <Check className="w-4 h-4 text-white stroke-[3]" />}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'customiseMenu' && (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
-                  <div className="bg-blue-50 border border-blue-100 rounded-[1.5rem] p-6">
-                    <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest mb-2">Request a Private Quote</h3>
-                    <p className="text-sm text-blue-700/80 leading-relaxed">Tell us what you're dreaming of, and we'll craft a personalized proposal.</p>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Event Type</label>
-                        <input
-                          type="text"
-                          value={proposalEventType}
-                          onChange={(e) => setProposalEventType(e.target.value)}
-                          placeholder="e.g. Wedding"
-                          className="w-full px-6 py-4 rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#268700] text-sm font-black transition-all outline-none"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Budget per Person (AED)</label>
-                        <input
-                          type="text"
-                          value={budgetPerPerson}
-                          onChange={(e) => setBudgetPerPerson(e.target.value)}
-                          placeholder="e.g. 150"
-                          className="w-full px-6 py-4 rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#268700] text-sm font-black transition-all outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Event Date</label>
-                        <input
-                          type="date"
-                          value={proposalEventDate}
-                          onChange={(e) => setProposalEventDate(e.target.value)}
-                          className="w-full px-6 py-4 rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#268700] text-sm font-black transition-all outline-none"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Location</label>
-                        <input
-                          type="text"
-                          value={proposalLocation}
-                          onChange={(e) => setProposalLocation(e.target.value)}
-                          placeholder="Enter location"
-                          className="w-full px-6 py-4 rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#268700] text-sm font-black transition-all outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Guests Needed</label>
-                      <input
-                        type="number"
-                        value={proposalGuestCount}
-                        onChange={(e) => setProposalGuestCount(parseInt(e.target.value))}
-                        className="w-full px-6 py-4 rounded-2xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#268700] text-sm font-black transition-all outline-none"
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Dietary Preferences</label>
-                      <div className="flex flex-wrap gap-2">
-                        {['Veg', 'Non Veg', 'Gluten Free', 'Vegan', 'Halal'].map((pref) => {
-                          const isSelected = selectedDietaryPreferences.has(pref);
-                          return (
-                            <button
-                              key={pref}
-                              onClick={() => {
-                                const newSet = new Set(selectedDietaryPreferences);
-                                isSelected ? newSet.delete(pref) : newSet.add(pref);
-                                setSelectedDietaryPreferences(newSet);
-                              }}
-                              className={`px-6 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${isSelected ? 'bg-green-600 text-white shadow-md' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}
-                            >
-                              {pref}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Your Vision & Special Requests</label>
-                      <textarea
-                        value={vision}
-                        onChange={(e) => setVision(e.target.value)}
-                        placeholder="Tell us about the theme, specific cuisines, or any special service requirements..."
-                        rows={4}
-                        className="w-full px-6 py-5 rounded-3xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#268700] text-sm font-bold transition-all outline-none resize-none"
-                      />
-                    </div>
-
-                    <button
-                      onClick={async () => {
-                        setSubmittingProposal(true);
-                        try {
-                          const res = await userApi.createProposal({
-                            caterer_id: catererId,
-                            vision,
-                            guest_count: proposalGuestCount,
-                            dietary_preferences: Array.from(selectedDietaryPreferences),
-                            budget_per_person: budgetPerPerson,
-                            location: proposalLocation || selectedLocation,
-                            event_type: proposalEventType || selectedEventType,
-                            event_date: proposalEventDate || eventDate
-                          });
-                          if (res.data?.success) { setShowProposalSuccessModal(true); setVision(''); }
-                        } catch (err) { alert('Failed to submit request'); }
-                        finally { setSubmittingProposal(false); }
-                      }}
-                      disabled={submittingProposal}
-                      className="w-full bg-gray-900 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-black transition-all shadow-xl active:scale-95"
-                    >
-                      {submittingProposal ? 'Synchronizing Vision...' : 'Send Request to Caterer'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+    <section className="bg-[#fafafa] min-h-screen">
+      <div className="max-w-7xl mx-auto px-6 py-10">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
+            <Link href="/user/caterers" className="underline cursor-pointer">Menu</Link>
+            <span>/</span>
+            <span>Package Details</span>
           </div>
 
-          {/* Right Column: Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 sticky top-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Event Details</h2>
-
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Event Type *</label>
-                  <select
-                    value={selectedEventType}
-                    onChange={(e) => setSelectedEventType(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#268700] transition-all"
+          {/* Caterer Header */}
+          <div className="flex items-start gap-6 mb-6">
+            <div className="bg-blue-600 text-white text-center py-8 px-6 rounded-lg font-bold text-xl min-w-[120px]">
+              {logoText}
+            </div>
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">{caterer.name}</h1>
+              <div className="flex gap-2 mb-2 flex-wrap">
+                {caterer.cuisines.map((cuisine) => (
+                  <span
+                    key={cuisine}
+                    className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full"
                   >
-                    <option value="">Select Event Type</option>
-                    {occasions.map((occ) => (
-                      <option key={occ.id} value={occ.id}>{occ.name}</option>
+                    {cuisine}
+                  </span>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-4 mb-2">
+                <div className="text-sm text-gray-600">
+                  ⭐ {packages.length > 0 && packages[0]?.rating
+                    ? typeof packages[0].rating === 'number'
+                      ? packages[0].rating.toFixed(1)
+                      : parseFloat(String(packages[0].rating)).toFixed(1)
+                    : 'N/A'}
+                </div>
+
+                {/* Capacity & Service Details - Inline with Rating */}
+                {(caterer as any).minimum_guests && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-500">Min:</span>
+                    <span className="text-sm font-semibold text-[#268700]">{(caterer as any).minimum_guests}</span>
+                    <span className="text-xs text-gray-500">guests</span>
+                  </div>
+                )}
+                {(caterer as any).maximum_guests && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-500">Max:</span>
+                    <span className="text-sm font-semibold text-[#268700]">{(caterer as any).maximum_guests}</span>
+                    <span className="text-xs text-gray-500">guests</span>
+                  </div>
+                )}
+                {(caterer as any).staff && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-500">Staff:</span>
+                    <span className="text-sm font-semibold text-[#268700]">{(caterer as any).staff}</span>
+                  </div>
+                )}
+                {(caterer as any).servers && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-500">Servers:</span>
+                    <span className="text-sm font-semibold text-[#268700]">{(caterer as any).servers}</span>
+                  </div>
+                )}
+                {((caterer as any).delivery_only || (caterer as any).delivery_plus_setup || (caterer as any).full_service) && (
+                  <>
+                    {(caterer as any).delivery_only && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                        Delivery
+                      </span>
+                    )}
+                    {(caterer as any).delivery_plus_setup && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                        Setup
+                      </span>
+                    )}
+                    {(caterer as any).full_service && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                        Full Service
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>  <p className="text-sm text-gray-600 mb-2">
+                {caterer.description || 'Award-winning catering service specializing in Mediterranean and French cuisine. We bring restaurant-quality food to your events with impeccable service.'}
+              </p>
+              <p className="font-semibold text-gray-900">{caterer.priceRange}</p>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-2 mb-6 w-full px-4 bg-white">
+            <button
+              onClick={() => setActiveTab('setMenus')}
+              className={`flex-1 py-3 text-base font-semibold rounded-lg transition ${activeTab === 'setMenus'
+                ? 'bg-[#268700] text-white shadow-md'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+            >
+              Set Menus
+            </button>
+            <button
+              onClick={() => setActiveTab('buildYourOwn')}
+              className={`flex-1 py-3 text-base font-semibold rounded-lg transition ${activeTab === 'buildYourOwn'
+                ? 'bg-[#268700] text-white shadow-md'
+                : 'bg-white text-gray-700  border-gray-300 hover:bg-gray-50'
+                }`}
+            >
+              Build Your Own
+            </button>
+            <button
+              onClick={() => setActiveTab('customiseMenu')}
+              className={`flex-1 py-3 text-base font-semibold rounded-lg transition ${activeTab === 'customiseMenu'
+                ? 'bg-[#268700] text-white shadow-md'
+                : 'bg-white text-gray-700  border-gray-300 hover:bg-gray-50'
+                }`}
+            >
+              Customise Menu
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'setMenus' && (
+          <div className="pb-32">
+            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
+              {/* Left Column - Packages */}
+              <div className="bg-white rounded-xl p-6 border border-gray-200">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900">Select Package</h2>
+                </div>
+
+                {/* Group packages by customisation_type */}
+                {(() => {
+                  const fixedPackages = packages.filter(
+                    (pkg) => !pkg.customisation_type || pkg.customisation_type === 'FIXED'
+                  );
+                  const customisablePackages = packages.filter(
+                    (pkg) => pkg.customisation_type === 'CUSTOMISABLE' || pkg.customisation_type === 'CUSTOMIZABLE'
+                  );
+
+                  const renderPackageCard = (pkg: Package) => {
+                    const isSelected = selectedPackage?.id === pkg.id;
+                    const menuItems = formatMenuItems(pkg);
+                    const totalPrice = pkg.price_per_person * guestCount;
+
+                    return (
+                      <div
+                        key={pkg.id}
+                        onClick={() => setSelectedPackage(pkg)}
+                        className={`bg-white border-2 rounded-lg p-3 cursor-pointer transition ${isSelected
+                          ? 'border-[#268700] bg-green-50 shadow-md'
+                          : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                          }`}
+                      >
+                        <h3 className="font-semibold text-base text-gray-900 mb-1">{pkg.name}</h3>
+                        <p className="text-xs text-gray-600 mb-3">{pkg.package_type?.name || 'Package'}</p>
+
+                        <div className="space-y-1.5 text-xs text-gray-700 mb-3">
+                          <div className="line-clamp-1">
+                            <span className="font-medium">Welcome Drink:</span> <span className="text-gray-600">{menuItems.welcomeDrink}</span>
+                          </div>
+                          <div className="line-clamp-1">
+                            <span className="font-medium">Starter:</span> <span className="text-gray-600">{menuItems.starter}</span>
+                          </div>
+                          <div className="line-clamp-1">
+                            <span className="font-medium">Main:</span> <span className="text-gray-600">{menuItems.main}</span>
+                          </div>
+                          <div className="line-clamp-1">
+                            <span className="font-medium">Sides:</span> <span className="text-gray-600">{menuItems.sides}</span>
+                          </div>
+                          <div className="line-clamp-1">
+                            <span className="font-medium">Dessert:</span> <span className="text-gray-600">{menuItems.dessert}</span>
+                          </div>
+                        </div>
+
+                        <div className="border-t border-gray-200 pt-3">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-semibold text-sm text-gray-900 flex items-center gap-1">
+                              <img src="/dirham.svg" alt="AED" className="w-4 h-4" />
+                              {pkg.price_per_person.toLocaleString()}/person
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-600 flex items-center gap-1">
+                            Total for {guestCount} guests: <span className="font-semibold text-gray-900 flex items-center gap-1"><img src="/dirham.svg" alt="AED" className="w-3 h-3" />{totalPrice.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  };
+
+                  if (packages.length === 0) {
+                    return (
+                      <div className="text-center py-10">
+                        <p className="text-gray-500">No packages available for this caterer.</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-8">
+                      {/* Fixed Packages Section */}
+                      {fixedPackages.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">Fixed Packages</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {fixedPackages.map(renderPackageCard)}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Customisable Packages Section */}
+                      {customisablePackages.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">Customisable Packages</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {customisablePackages.map(renderPackageCard)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Right Column - Event Details Form */}
+              <aside className="bg-white border border-gray-200 rounded-xl p-5 h-fit">
+                <h3 className="font-semibold text-lg mb-4">Event Details</h3>
+
+                {/* Event Type */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Event Type <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="eventType"
+                    value={eventType}
+                    onChange={(e) => setEventType(e.target.value)}
+                    className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#268700]"
+                    disabled={loadingOccasions}
+                  >
+                    <option value="" className="text-black">
+                      {loadingOccasions ? 'Loading...' : 'Select Event Type'}
+                    </option>
+                    {occasions.map((occasion) => (
+                      <option key={occasion.id} value={occasion.id} className="text-black">
+                        {occasion.name}
+                      </option>
                     ))}
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Location *</label>
+                {/* Location */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Location <span className="text-red-500">*</span>
+                  </label>
                   <select
-                    value={selectedLocation}
-                    onChange={(e) => setSelectedLocation(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#268700] transition-all"
+                    name="location"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#268700]"
                   >
-                    <option value="">Select Location</option>
-                    <option value="Dubai Marina">Dubai Marina</option>
-                    <option value="Downtown Dubai">Downtown Dubai</option>
-                    <option value="JLT">JLT</option>
-                    <option value="Palm Jumeirah">Palm Jumeirah</option>
+                    <option value="" className="text-black">Select Location</option>
+                    <option value="Downtown Dubai" className="text-black">Downtown Dubai</option>
+                    <option value="Dubai Marina" className="text-black">Dubai Marina</option>
+                    <option value="Jumeirah" className="text-black">Jumeirah</option>
+                    <option value="Palm Jumeirah" className="text-black">Palm Jumeirah</option>
+                    <option value="Business Bay" className="text-black">Business Bay</option>
+                    <option value="Dubai International Financial Centre (DIFC)" className="text-black">Dubai International Financial Centre (DIFC)</option>
+                    <option value="Dubai Mall Area" className="text-black">Dubai Mall Area</option>
+                    <option value="Burj Al Arab Area" className="text-black">Burj Al Arab Area</option>
+                    <option value="Dubai Festival City" className="text-black">Dubai Festival City</option>
+                    <option value="Dubai Sports City" className="text-black">Dubai Sports City</option>
+                    <option value="Dubai Media City" className="text-black">Dubai Media City</option>
+                    <option value="Dubai Internet City" className="text-black">Dubai Internet City</option>
+                    <option value="Dubai Knowledge Park" className="text-black">Dubai Knowledge Park</option>
+                    <option value="Dubai Healthcare City" className="text-black">Dubai Healthcare City</option>
+                    <option value="Dubai World Trade Centre" className="text-black">Dubai World Trade Centre</option>
+                    <option value="Dubai Creek" className="text-black">Dubai Creek</option>
+                    <option value="Deira" className="text-black">Deira</option>
+                    <option value="Bur Dubai" className="text-black">Bur Dubai</option>
+                    <option value="Al Barsha" className="text-black">Al Barsha</option>
+                    <option value="Jumeirah Beach Residence (JBR)" className="text-black">Jumeirah Beach Residence (JBR)</option>
+                    <option value="Dubai Hills" className="text-black">Dubai Hills</option>
+                    <option value="Arabian Ranches" className="text-black">Arabian Ranches</option>
+                    <option value="Emirates Hills" className="text-black">Emirates Hills</option>
+                    <option value="Dubai Silicon Oasis" className="text-black">Dubai Silicon Oasis</option>
+                    <option value="Dubai Production City" className="text-black">Dubai Production City</option>
+                    <option value="Dubai Studio City" className="text-black">Dubai Studio City</option>
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Number of Guests *</label>
+                {/* Guests */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Number of Guests <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="number"
+                    min="1"
                     value={guestCount}
                     onChange={(e) => {
-                      const val = parseInt(e.target.value);
-                      setGuestCount(isNaN(val) ? 0 : val);
+                      const value = Number(e.target.value);
+                      if (value > 0) {
+                        setGuestCount(value);
+                      }
                     }}
-                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#268700] transition-all"
+                    className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#268700]"
+                    placeholder="50"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Event Date *</label>
+                {/* Date */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Event Date <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="date"
+                    name="date"
                     value={eventDate}
                     onChange={(e) => setEventDate(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#268700] transition-all"
+                    className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#268700]"
                   />
                 </div>
 
-                <div className="pt-6 border-t border-gray-100">
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Estimated Total</div>
-                  <div className="text-2xl font-black text-gray-900">
-                    AED {(
-                      activeTab === 'buildYourOwn'
-                        ? Array.from(selectedDishes).reduce((sum, id) => sum + (dishes.find(d => d.id === id)?.price || 0), 0) * (guestCount || 0)
-                        : selectedPackage
-                          ? (Number(selectedPackage.total_price) / (selectedPackage.people_count || 1)) * (guestCount || 0)
-                          : 0
-                    ).toLocaleString()}
+                {/* Total Cost Preview */}
+                {selectedPackage && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="font-semibold text-sm text-gray-700 mb-1">Estimated Total</div>
+                    <div className="text-lg font-bold text-gray-900 flex items-center gap-1">
+                      <img src="/dirham.svg" alt="AED" className="w-5 h-5" />
+                      {calculateTotal().toLocaleString()}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {guestCount} {guestCount === 1 ? 'guest' : 'guests'}
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-400 mt-1">{guestCount} guests</div>
+                )}
+              </aside>
+            </div>
+
+            {/* Footer with Total and Add to Cart - Only show for Set Menus */}
+            {activeTab === 'setMenus' && (
+              <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4 z-50">
+                <div className="max-w-7xl mx-auto flex justify-between items-center">
+                  <div>
+                    <p className="text-sm text-gray-600">Total Amount</p>
+                    <p className="text-2xl font-bold text-gray-900 flex items-center gap-1">
+                      <img src="/dirham.svg" alt="AED" className="w-6 h-6" />
+                      {calculateTotal().toLocaleString()}
+                    </p>
+                    <p className="text-sm text-gray-500">{guestCount} guests</p>
+                  </div>
+                  <button
+                    onClick={handleAddToCart}
+                    disabled={!selectedPackage || addingToCart || !eventType || !location || !eventDate}
+                    className={`px-8 py-3 rounded-full font-semibold transition ${!selectedPackage || addingToCart || !eventType || !location || !eventDate
+                      ? 'bg-gray-400 cursor-not-allowed text-white'
+                      : 'bg-[#268700] text-white hover:bg-[#1f6b00]'
+                      }`}
+                  >
+                    {addingToCart ? 'Proceeding...' : 'Continue to Package'}
+                  </button>
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'buildYourOwn' && (
+          <div className="pb-32">
+            {/* Sub-tabs for Build Your Own */}
+            <div className="flex gap-2 mb-6">
+              <button
+                onClick={() => {
+                  setBuildYourOwnSubTab('fixed');
+                  setSelectedPackage(null);
+                  setSelectedDishes(new Set());
+                }}
+                className={`flex-1 py-3 text-base font-semibold rounded-lg transition ${buildYourOwnSubTab === 'fixed'
+                  ? 'bg-[#268700] text-white shadow-md'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+              >
+                Fixed
+              </button>
+              <button
+                onClick={() => {
+                  setBuildYourOwnSubTab('customizable');
+                  setSelectedPackage(null);
+                  setSelectedDishes(new Set());
+                }}
+                className={`flex-1 py-3 text-base font-semibold rounded-lg transition ${buildYourOwnSubTab === 'customizable'
+                  ? 'bg-[#268700] text-white shadow-md'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+              >
+                Customizable
+              </button>
+            </div>
+
+            {/* Fixed Sub-tab Content */}
+            {buildYourOwnSubTab === 'fixed' && (
+              <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
+                {/* Left Column - Fixed Packages */}
+                <div className="bg-white rounded-xl p-6 border border-gray-200">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-6">Select Package</h2>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {packages.filter(pkg => pkg.customisation_type === 'FIXED').map((pkg) => {
+                      const isSelected = selectedPackage?.id === pkg.id;
+                      const menuItems = formatMenuItems(pkg);
+                      const totalPrice = pkg.price_per_person * guestCount;
+
+                      return (
+                        <div
+                          key={pkg.id}
+                          onClick={() => setSelectedPackage(pkg)}
+                          className={`bg-white border-2 rounded-lg p-3 cursor-pointer transition ${isSelected
+                            ? 'border-[#268700] bg-green-50 shadow-md'
+                            : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                            }`}
+                        >
+                          <h3 className="font-semibold text-base text-gray-900 mb-1">{pkg.name}</h3>
+                          <p className="text-xs text-gray-600 mb-3">{pkg.package_type?.name || 'Package'}</p>
+
+                          <div className="space-y-1.5 text-xs text-gray-700 mb-3">
+                            <div className="line-clamp-1">
+                              <span className="font-medium">Welcome Drink:</span> <span className="text-gray-600">{menuItems.welcomeDrink}</span>
+                            </div>
+                            <div className="line-clamp-1">
+                              <span className="font-medium">Starter:</span> <span className="text-gray-600">{menuItems.starter}</span>
+                            </div>
+                            <div className="line-clamp-1">
+                              <span className="font-medium">Main:</span> <span className="text-gray-600">{menuItems.main}</span>
+                            </div>
+                            <div className="line-clamp-1">
+                              <span className="font-medium">Sides:</span> <span className="text-gray-600">{menuItems.sides}</span>
+                            </div>
+                            <div className="line-clamp-1">
+                              <span className="font-medium">Dessert:</span> <span className="text-gray-600">{menuItems.dessert}</span>
+                            </div>
+                          </div>
+
+                          <div className="border-t border-gray-200 pt-3">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="font-semibold text-sm text-gray-900 flex items-center gap-1">
+                                <img src="/dirham.svg" alt="AED" className="w-4 h-4" />
+                                {pkg.price_per_person.toLocaleString()}/person
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-600 flex items-center gap-1">
+                              Total for {guestCount} guests: <span className="font-semibold text-gray-900 flex items-center gap-1"><img src="/dirham.svg" alt="AED" className="w-3 h-3" />{totalPrice.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Right Column - Event Details for Fixed */}
+                <aside className="bg-white border border-gray-200 rounded-xl p-5 h-fit">
+                  <h3 className="font-semibold text-lg mb-4">Event Details</h3>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Event Type <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="eventType"
+                      value={eventType}
+                      onChange={(e) => setEventType(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#268700]"
+                      disabled={loadingOccasions}
+                    >
+                      <option value="" className="text-black">
+                        {loadingOccasions ? 'Loading...' : 'Select Event Type'}
+                      </option>
+                      {occasions.map((occasion) => (
+                        <option key={occasion.id} value={occasion.id} className="text-black">
+                          {occasion.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Location <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="location"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#268700]"
+                    >
+                      <option value="" className="text-black">Select Location</option>
+                      <option value="Downtown Dubai" className="text-black">Downtown Dubai</option>
+                      <option value="Dubai Marina" className="text-black">Dubai Marina</option>
+                    </select>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Number of Guests <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={guestCount}
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        if (value > 0) {
+                          setGuestCount(value);
+                        }
+                      }}
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#268700]"
+                      placeholder="50"
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Event Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      name="date"
+                      value={eventDate}
+                      onChange={(e) => setEventDate(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#268700]"
+                    />
+                  </div>
+
+                  {selectedPackage && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="font-semibold text-sm text-gray-700 mb-1">Estimated Total</div>
+                      <div className="text-lg font-bold text-gray-900 flex items-center gap-1">
+                        <img src="/dirham.svg" alt="AED" className="w-5 h-5" />
+                        {calculateTotal().toLocaleString()}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {guestCount} {guestCount === 1 ? 'guest' : 'guests'}
+                      </div>
+                    </div>
+                  )}
+                </aside>
+              </div>
+            )}
+
+            {/* Customizable Sub-tab Content */}
+            {buildYourOwnSubTab === 'customizable' && (
+              <div>
+                {/* Header Section */}
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">Build Your Own Menu</h2>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-700">Number of Guests:</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={guestCount}
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        if (value > 0) {
+                          setGuestCount(value);
+                        }
+                      }}
+                      className="bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#268700] focus:border-transparent"
+                      placeholder="50"
+                    />
+                  </div>
+                </div>
+
+            {/* Dietary Filters */}
+            <div className="flex gap-3 mb-6">
+              <button
+                onClick={() => setDietaryFilter(dietaryFilter === 'veg' ? null : 'veg')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition ${dietaryFilter === 'veg'
+                  ? 'bg-[#268700] text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+              >
+                Veg
+              </button>
+              <button
+                onClick={() => setDietaryFilter(dietaryFilter === 'glutenFree' ? null : 'glutenFree')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition ${dietaryFilter === 'glutenFree'
+                  ? 'bg-[#268700] text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+              >
+                Gluten Free
+              </button>
+              <button
+                onClick={() => setDietaryFilter(dietaryFilter === 'nonVeg' ? null : 'nonVeg')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition ${dietaryFilter === 'nonVeg'
+                  ? 'bg-[#268700] text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+              >
+                Non Veg
+              </button>
+              <button
+                onClick={() => setDietaryFilter(dietaryFilter === 'sugarFree' ? null : 'sugarFree')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition ${dietaryFilter === 'sugarFree'
+                  ? 'bg-[#268700] text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+              >
+                Sugar Free
+              </button>
+            </div>
+
+            {/* Menu Items Section */}
+            <div className="bg-green-100 text-gray-800 p-4 rounded-lg mb-4 border border-green-200">
+              <h3 className="font-semibold text-lg mb-2 text-gray-900">Menu Items (Customisable)</h3>
+              <p className="text-sm text-gray-700">
+                {caterer.description || 'Award-winning catering service specializing in Mediterranean and French cuisine. We bring restaurant-quality food to your events with impeccable service.'}
+              </p>
+            </div>
+
+            {/* Loading State */}
+            {loadingDishes ? (
+              <div className="text-center py-10">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#268700] mx-auto mb-4"></div>
+                <p className="text-gray-500">Loading dishes...</p>
+              </div>
+            ) : dishes.length === 0 ? (
+              <div className="text-center py-10">
+                <p className="text-gray-500">No dishes available for this caterer.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {groupDishesByCategory().map((categoryGroup) => {
+                  const selectedInCategory = Array.from(selectedDishes).filter(id => {
+                    const dish = dishes.find(d => d.id === id);
+                    return dish?.category?.name === categoryGroup.categoryName;
+                  }).length;
+
+                  return (
+                    <div key={categoryGroup.categoryName} className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-lg text-gray-900 mb-4">
+                        {categoryGroup.categoryName}
+                        {selectedInCategory > 0 && (
+                          <span className="text-sm text-gray-500 ml-2">
+                            ({selectedInCategory} selected)
+                          </span>
+                        )}
+                      </h4>
+                      <div className="space-y-2">
+                        {categoryGroup.dishes.map((dish) => {
+                          const isSelected = isDishSelected(dish.id);
+
+                          return (
+                            <div
+                              key={dish.id}
+                              className={`flex items-center justify-between p-3 rounded-lg border transition cursor-pointer ${isSelected
+                                ? 'border-[#268700] bg-green-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                                }`}
+                              onClick={() => toggleDishSelection(dish.id, categoryGroup)}
+                            >
+                              <div className="flex-1">
+                                <p className="font-medium text-gray-900">{dish.name}</p>
+                                <p className="text-sm text-gray-600 flex items-center gap-1">
+                                  {dish.cuisine_type?.name || 'Cuisine'} • <img src="/dirham.svg" alt="AED" className="w-3 h-3" />{Number(dish.price).toLocaleString()}/person
+                                </p>
+                              </div>
+                              <div className="ml-4">
+                                {isSelected ? (
+                                  <Check className="w-5 h-5 text-[#268700]" />
+                                ) : (
+                                  <Plus className="w-5 h-5 text-gray-400" />
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+                {/* Footer for Customizable */}
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4">
+                  <div className="max-w-7xl mx-auto flex justify-between items-center">
+                    <div>
+                      <p className="text-sm text-gray-600">Total Amount</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        AED {calculateTotal().toLocaleString()}
+                      </p>
+                      <p className="text-sm text-gray-500">{guestCount} guests</p>
+                    </div>
+                    <button
+                      onClick={handleAddToCart}
+                      disabled={selectedDishes.size === 0 || addingToCart}
+                      className={`px-8 py-3 rounded-full font-semibold transition ${selectedDishes.size === 0 || addingToCart
+                        ? 'bg-gray-400 cursor-not-allowed text-white'
+                        : 'bg-[#268700] text-white hover:bg-[#1f6b00]'
+                        }`}
+                    >
+                      {addingToCart ? 'Creating...' : 'Create Package'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Footer for Fixed Sub-tab */}
+            {buildYourOwnSubTab === 'fixed' && (
+              <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4 z-50">
+                <div className="max-w-7xl mx-auto flex justify-between items-center">
+                  <div>
+                    <p className="text-sm text-gray-600">Total Amount</p>
+                    <p className="text-2xl font-bold text-gray-900 flex items-center gap-1">
+                      <img src="/dirham.svg" alt="AED" className="w-6 h-6" />
+                      {calculateTotal().toLocaleString()}
+                    </p>
+                    <p className="text-sm text-gray-500">{guestCount} guests</p>
+                  </div>
+                  <button
+                    onClick={handleAddToCart}
+                    disabled={!selectedPackage || addingToCart || !eventType || !location || !eventDate}
+                    className={`px-8 py-3 rounded-full font-semibold transition ${!selectedPackage || addingToCart || !eventType || !location || !eventDate
+                      ? 'bg-gray-400 cursor-not-allowed text-white'
+                      : 'bg-[#268700] text-white hover:bg-[#1f6b00]'
+                      }`}
+                  >
+                    {addingToCart ? 'Proceeding...' : 'Continue to Package'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'customiseMenu' && (
+          <div className="pb-10">
+            {/* Request a Custom Proposal Section */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Request a Custom Proposal</h2>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-700">Number of Guests:</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={proposalGuestCount}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      if (value > 0) {
+                        setProposalGuestCount(value);
+                      }
+                    }}
+                    className="bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-[#268700] focus:border-transparent"
+                    placeholder="50"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Event Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Event Type
+                  </label>
+                  <input
+                    type="text"
+                    value={proposalEventType}
+                    onChange={(e) => setProposalEventType(e.target.value)}
+                    placeholder="e.g., Wedding, Corporate Event, Birthday"
+                    className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:border-[#268700]"
+                  />
+                </div>
+
+                {/* Budget per Person */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Budget per Person
+                  </label>
+                  <input
+                    type="text"
+                    value={budgetPerPerson}
+                    onChange={(e) => setBudgetPerPerson(e.target.value)}
+                    placeholder="0"
+                    className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:border-[#268700] pl-10"
+                  />
+                  <img src="/dirham.svg" alt="AED" className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                </div>
+
+                {/* Event Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Event Date
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={proposalEventDate}
+                      onChange={(e) => setProposalEventDate(e.target.value)}
+                      className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:border-[#268700]"
+                    />
+                  </div>
+                </div>
+
+                {/* Location */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    value={proposalLocation}
+                    onChange={(e) => setProposalLocation(e.target.value)}
+                    placeholder="Enter event location"
+                    className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:border-[#268700]"
+                  />
+                </div>
+              </div>
+
+              {/* Dietary Preferences */}
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Dietary Preferences
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {['Veg', 'Non Veg', 'Gluten Free', 'Sugar Free', 'Vegan', 'Halal', 'Kosher'].map((pref) => {
+                    const isSelected = selectedDietaryPreferences.has(pref);
+                    return (
+                      <button
+                        key={pref}
+                        type="button"
+                        onClick={() => {
+                          const newSet = new Set(selectedDietaryPreferences);
+                          if (isSelected) {
+                            newSet.delete(pref);
+                          } else {
+                            newSet.add(pref);
+                          }
+                          setSelectedDietaryPreferences(newSet);
+                        }}
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition ${isSelected
+                          ? 'bg-green-100 text-green-800 border border-green-300'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                          }`}
+                      >
+                        {pref}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Tell us about your vision */}
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tell us about your vision
+                </label>
+                <textarea
+                  value={vision}
+                  onChange={(e) => setVision(e.target.value)}
+                  placeholder="Describe your event, special requirements, theme, or any other details..."
+                  rows={4}
+                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:border-[#268700] resize-none"
+                />
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={async () => {
+                    if (!catererId) {
+                      alert('Caterer ID is missing. Please try again.');
+                      return;
+                    }
+
+                    setSubmittingProposal(true);
+                    try {
+                      const response = await userApi.createProposal({
+                        caterer_id: catererId,
+                        event_type: proposalEventType || undefined,
+                        location: proposalLocation || undefined,
+                        dietary_preferences: Array.from(selectedDietaryPreferences),
+                        budget_per_person: budgetPerPerson || undefined,
+                        event_date: proposalEventDate || undefined,
+                        vision: vision || undefined,
+                        guest_count: proposalGuestCount,
+                      });
+
+                      if (response.error) {
+                        alert(response.error);
+                      } else if (response.data?.success) {
+                        // Reset form
+                        setProposalEventType('');
+                        setProposalLocation('12/345 Business Bay');
+                        setSelectedDietaryPreferences(new Set(['Gluten Free', 'Sugar Free']));
+                        setBudgetPerPerson('AED 12');
+                        setProposalEventDate('2024-12-12');
+                        setVision('');
+                        setProposalGuestCount(50);
+                        // Show success modal
+                        setShowProposalSuccessModal(true);
+                      } else {
+                        alert('Failed to submit proposal. Please try again.');
+                      }
+                    } catch (err: any) {
+                      console.error('Error submitting proposal:', err);
+                      alert(err?.message || 'Failed to submit proposal. Please try again.');
+                    } finally {
+                      setSubmittingProposal(false);
+                    }
+                  }}
+                  disabled={submittingProposal || !catererId}
+                  className={`px-8 py-3 rounded-full font-semibold transition ${submittingProposal || !catererId
+                    ? 'bg-gray-400 cursor-not-allowed text-white'
+                    : 'bg-[#268700] text-white hover:bg-[#1f6b00]'
+                    }`}
+                >
+                  {submittingProposal ? 'Submitting...' : 'Request a Quote'}
+                </button>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] px-6 py-4 z-50">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">Total Amount</span>
-            <span className="text-2xl font-black text-gray-900">
-              AED {(
-                activeTab === 'buildYourOwn'
-                  ? Array.from(selectedDishes).reduce((sum, id) => sum + (dishes.find(d => d.id === id)?.price || 0), 0) * (guestCount || 0)
-                  : selectedPackage
-                    ? (Number(selectedPackage.total_price) / (selectedPackage.people_count || 1)) * (guestCount || 0)
-                    : 0
-              ).toLocaleString()}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-6">
-            {cartMessage && (
-              <div className={`text-sm font-bold ${cartMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-                {cartMessage.text}
-              </div>
-            )}
-            <button
-              onClick={handleAddToCart}
-              disabled={addingToCart || (activeTab === 'buildYourOwn' ? selectedDishes.size === 0 : !selectedPackage)}
-              className={`px-12 py-4 rounded-xl font-bold transition-all shadow-lg active:scale-95 ${addingToCart || (activeTab === 'buildYourOwn' ? selectedDishes.size === 0 : !selectedPackage)
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                : 'bg-[#268700] text-white hover:bg-[#1f6b00]'
-                }`}
-            >
-              {addingToCart ? 'Processing...' : activeTab === 'buildYourOwn' ? 'Create Package' : 'Add to Cart'}
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Proposal Success Modal */}
-      {showProposalSuccessModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/30 backdrop-blur-md"
-            onClick={() => setShowProposalSuccessModal(false)}
-          />
-          <div className="relative bg-white rounded-[2.5rem] shadow-2xl max-w-md w-full p-10 transform animate-in zoom-in duration-300">
-            <button
+      {
+        showProposalSuccessModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Blurred Background */}
+            <div
+              className="absolute inset-0 bg-black/30 backdrop-blur-md"
               onClick={() => setShowProposalSuccessModal(false)}
-              className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X size={24} />
-            </button>
+            />
 
-            <div className="flex justify-center mb-8">
-              <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center">
-                <Check className="w-12 h-12 text-[#268700]" strokeWidth={3} />
-              </div>
-            </div>
-
-            <div className="text-center">
-              <h3 className="text-2xl font-black text-gray-900 mb-4 tracking-tight">
-                Proposal Submitted!
-              </h3>
-              <p className="text-gray-600 mb-10 font-medium leading-relaxed">
-                Your request has been beamed to the caterer. They'll review your vision and return with a customized quote soon!
-              </p>
-
+            {/* Modal Content */}
+            <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 transform transition-all">
+              {/* Close Button */}
               <button
                 onClick={() => setShowProposalSuccessModal(false)}
-                className="w-full bg-[#268700] text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-[#1f6b00] transition-all shadow-xl active:scale-95"
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Close"
               >
-                Great, Can't Wait!
+                <X size={24} />
               </button>
+
+              {/* Success Icon */}
+              <div className="flex justify-center mb-6">
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+                  <Check className="w-12 h-12 text-[#268700]" strokeWidth={3} />
+                </div>
+              </div>
+
+              {/* Success Message */}
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                  Proposal Submitted!
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Your proposal request has been submitted successfully. We will get back to you soon with a customized quote.
+                </p>
+
+                {/* Action Button */}
+                <button
+                  onClick={() => setShowProposalSuccessModal(false)}
+                  className="w-full bg-[#268700] text-white py-3 px-6 rounded-full font-semibold hover:bg-[#1f6b00] transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
+          </div>
+        )
+      }
+
+      {/* Notification Toast */}
+      {notification && (
+        <div className="fixed top-4 right-4 z-50 animate-slide-in">
+          <div
+            className={`px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px] ${
+              notification.type === 'success'
+                ? 'bg-green-500 text-white'
+                : 'bg-red-500 text-white'
+            }`}
+          >
+            <span className="flex-1">{notification.message}</span>
+            <button
+              onClick={() => setNotification(null)}
+              className="text-white hover:text-gray-200"
+            >
+              <X size={18} />
+            </button>
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function Plus(props: any) {
-  return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 12h14" /><path d="M12 5v14" />
-    </svg>
-  );
-}
-
-export default function CatererMenuPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
-      <CatererMenuContent />
-    </Suspense>
+    </section >
   );
 }
