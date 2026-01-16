@@ -171,7 +171,8 @@ export default function PackageDetailPage() {
   // Calculate total price
   const totalPrice = useMemo(() => {
     if (!pkg) return 0;
-    const multiplier = guestCount / pkg.people_count;
+    const peopleCount = pkg.people_count || pkg.minimum_people || 1;
+    const multiplier = guestCount / peopleCount;
     return Math.round(pkg.total_price * multiplier);
   }, [pkg, guestCount]);
 
@@ -334,7 +335,11 @@ export default function PackageDetailPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold text-gray-900">
-                    AED {pkg.price_per_person.toLocaleString()}
+                    AED {(() => {
+                      const peopleCount = pkg.people_count || pkg.minimum_people || 1;
+                      const pricePerPerson = pkg.price_per_person ?? (pkg.total_price / peopleCount);
+                      return pricePerPerson.toLocaleString();
+                    })()}
                   </p>
                   <p className="text-sm text-gray-500">per person</p>
                 </div>
@@ -512,7 +517,11 @@ export default function PackageDetailPage() {
               <div className="border-t border-gray-100 pt-4 mt-4">
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-gray-600">Price per person</span>
-                  <span>AED {pkg.price_per_person.toLocaleString()}</span>
+                  <span>AED {(() => {
+                    const peopleCount = pkg.people_count || pkg.minimum_people || 1;
+                    const pricePerPerson = pkg.price_per_person ?? (pkg.total_price / peopleCount);
+                    return pricePerPerson.toLocaleString();
+                  })()}</span>
                 </div>
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-gray-600">Number of guests</span>

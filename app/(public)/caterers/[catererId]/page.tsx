@@ -135,7 +135,9 @@ export default function CatererDetailPage() {
   // Calculate totals
   const packageTotal = useMemo(() => {
     if (!selectedPackage) return 0;
-    return selectedPackage.price_per_person * guestCount;
+    const peopleCount = selectedPackage.people_count || selectedPackage.minimum_people || 1;
+    const pricePerPerson = selectedPackage.price_per_person ?? (selectedPackage.total_price / peopleCount);
+    return pricePerPerson * guestCount;
   }, [selectedPackage, guestCount]);
 
   const buildOwnTotal = useMemo(() => {

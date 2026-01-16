@@ -201,7 +201,8 @@ export default function PackageDetailsPage() {
             // Calculate price based on guests (scale from package price)
             // If guests = people_count, use original price
             // If guests = 2x people_count, use 2x price, etc.
-            const priceMultiplier = guests / pkg.people_count;
+            const peopleCount = pkg.people_count || pkg.minimum_people || 1;
+            const priceMultiplier = guests / peopleCount;
             const calculatedPrice = pkg.total_price * priceMultiplier;
 
             const cartData = {
@@ -515,9 +516,7 @@ export default function PackageDetailsPage() {
                                                 <div
                                                     key={item.id}
                                                     className={`py-3 px-4 border-b border-gray-200 ${itemIndex === items.length - 1 && categoryIndex !== Object.keys(groupedItems).length - 1
-                                                        order-b-2 border-gray-300'
-                                                        
-                                                }`}
+                                                        ? 'border-b-2 border-gray-300' : ''}`}
                                             >
                                             <div className="flex items-center justify-between">
                                                 <span className="text-sm text-gray-700">
@@ -587,8 +586,8 @@ export default function PackageDetailsPage() {
                                                             <div
                                                                 key={dish.id}
                                                                 className={`flex items-center justify-between p-3 rounded-lg border transition cursor-pointer ${isSelected
-                                                                        order-[#268700] bg-green-50'
-                                                    order-gray-200 hover:border-gray-300'
+                                                                    ? 'border-[#268700] bg-green-50'
+                                                                    : 'border-gray-200 hover:border-gray-300'
                                                                 }`}
                                                     onClick={() => toggleDishSelection(dish.id)}
                                                             >
@@ -630,9 +629,9 @@ export default function PackageDetailsPage() {
                                 onClick={handleSaveCustomPackage}
                                 disabled={selectedDishes.size === 0 || savingCustomPackage}
                                 className={`px-8 py-3 rounded-full font-semibold transition ${selectedDishes.size === 0 || savingCustomPackage
-                                                g-gray-400 cursor-not-allowed text-white'
-                            g-[#268700] text-white hover:bg-[#1f6b00]'
-                                        }`}
+                                    ? 'bg-gray-400 cursor-not-allowed text-white'
+                                    : 'bg-[#268700] text-white hover:bg-[#1f6b00]'
+                                }`}
                                     >
                             {savingCustomPackage ? 'Saving...' : 'Save Customised Package'}
                         </button>
@@ -660,10 +659,10 @@ export default function PackageDetailsPage() {
 
                     <p className="mt-2 font-semibold flex items-center gap-1">
                         <img src="/dirham.svg" alt="AED" className="w-4 h-4" />
-                        {pkg.price_per_person.toLocaleString()}/Person
+                        {(pkg.price_per_person ?? (pkg.total_price / (pkg.people_count || pkg.minimum_people || 1))).toLocaleString()}/Person
                     </p>
                     <p className="text-sm text-gray-500 flex items-center gap-1">
-                        Total: <img src="/dirham.svg" alt="AED" className="w-3 h-3" />{pkg.total_price.toLocaleString()} for {pkg.people_count} people
+                        Total: <img src="/dirham.svg" alt="AED" className="w-3 h-3" />{pkg.total_price?.toLocaleString() ?? '0'} for {pkg.people_count || pkg.minimum_people || 0} people
                     </p>
 
     {/* Controls */ }
@@ -742,9 +741,10 @@ export default function PackageDetailsPage() {
                                 className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#268700]"
                                 disabled={!pkg || !pkg.people_count}
                             >
-                                {pkg && pkg.people_count ? (
+                                {pkg && (pkg.people_count || pkg.minimum_people) ? (
                                     Array.from({ length: 10 }, (_, i) => {
-                                        const guestCount = pkg.people_count * (i + 1);
+                                        const baseCount = pkg.people_count || pkg.minimum_people || 1;
+                                        const guestCount = baseCount * (i + 1);
                                         return (
                                             <option key={guestCount} value={guestCount} className="text-black">
                                                 {guestCount} {guestCount === 1 ? 'guest' : 'guests'}
@@ -777,25 +777,35 @@ export default function PackageDetailsPage() {
                         Total Cost
                         <div className="text-lg flex items-center gap-1">
                             <img src="/dirham.svg" alt="AED" className="w-5 h-5" />
-                            {guests > 0 && guests !== pkg.people_count 
-                                ? (pkg.total_price * (guests / pkg.people_count)).toLocaleString(undefined, { maximumFractionDigits: 2 })
-                                : pkg.total_price.toLocaleString()}
+                            {(() => {
+                                const peopleCount = pkg.people_count || pkg.minimum_people || 1;
+                                return guests > 0 && guests !== peopleCount 
+                                    ? (pkg.total_price * (guests / peopleCount)).toLocaleString(undefined, { maximumFractionDigits: 2 })
+                                    : pkg.total_price?.toLocaleString() ?? '0';
+                            })()}
                         </div>
                         <div className="text-sm text-gray-500 font-normal flex items-center gap-1">
-                            ({guests > 0 ? guests : pkg.people_count} {guests === 1 ? 'person' : 'people'} × <img src="/dirham.svg" alt="AED" className="w-3 h-3" />{pkg.price_per_person.toLocaleString()}/person)
+                            {(() => {
+                                const peopleCount = pkg.people_count || pkg.minimum_people || 1;
+                                const pricePerPerson = pkg.price_per_person ?? (pkg.total_price / peopleCount);
+                                return (
+                                    <>
+                                        ({guests > 0 ? guests : peopleCount} {guests === 1 || peopleCount === 1 ? 'person' : 'people'} × <img src="/dirham.svg" alt="AED" className="w-3 h-3" />{pricePerPerson.toLocaleString()}/person)
+                                    </>
+                                );
+                            })()}
                         </div>
                     </div>
 
-    {/* Cart Message */ }
-    {
-        cartMessage && (
-            <div className={`mt-4 p-3 rounded-lg text-sm ${cartMessage.type === 'success' 
-                                g-green-100 text-green-800 border border-green-300' 
-        g - red - 100 text - red - 800 border border - red - 300'
-    } `}>
-                            {cartMessage.text}
-                        </div>
-                    )}
+    {/* Cart Message */}
+    {cartMessage && (
+        <div className={`mt-4 p-3 rounded-lg text-sm ${cartMessage.type === 'success'
+            ? 'bg-green-100 text-green-800 border border-green-300'
+            : 'bg-red-100 text-red-800 border border-red-300'
+        }`}>
+            {cartMessage.text}
+        </div>
+    )}
 
                     <button 
                         onClick={isAddedToCart ? handleRemoveFromCart : handleAddToCart}
@@ -804,15 +814,15 @@ export default function PackageDetailsPage() {
                             (!pkg) || 
                             (isAddedToCart ? false : (!eventType || !location || !guests || !date))
                         }
-                        className={`mt - 4 w - full py - 3 rounded - full text - white font - medium transition - all ${
-        (addingToCart || removingFromCart) || !pkg
-        g - gray - 400 cursor - not - allowed'
-        AddedToCart
-            ? 'been-800 hover:bg-green-900 cursor-pointer'
-            : (!tType || !location || !guests || !date)
-                ? 'bg-gr00 cursor-not-allowed'
-                : 'bg-gr600 hover:opacity-90 cursor-pointer'
-    } `}
+                        className={`mt-4 w-full py-3 rounded-full text-white font-medium transition-all ${
+                            (addingToCart || removingFromCart) || !pkg
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : isAddedToCart
+                                    ? 'bg-green-800 hover:bg-green-900 cursor-pointer'
+                                    : (!eventType || !location || !guests || !date)
+                                        ? 'bg-gray-400 cursor-not-allowed'
+                                        : 'bg-[#268700] hover:opacity-90 cursor-pointer'
+                        }`}
                     >
                         {removingFromCart 
                             ? 'Removing from Cart...' 

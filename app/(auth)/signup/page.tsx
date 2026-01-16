@@ -10,6 +10,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
+import { ArrowLeft } from 'lucide-react';
 
 function SignupContent() {
   const router = useRouter();
@@ -82,6 +83,15 @@ function SignupContent() {
       {/* Right Side - Signup Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8 overflow-y-auto">
         <div className="max-w-md w-full space-y-6">
+          {/* Back to Home Button */}
+          <Link 
+            href="/" 
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-[#268700] transition-colors duration-200 mb-4 group"
+          >
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-200" />
+            <span className="text-sm font-medium">Back to Home</span>
+          </Link>
+
           {/* Mobile Logo */}
           <div className="flex justify-center mb-6">
             <Image src="/logo_partyfud.svg" alt="Party Fud Logo" width={128} height={40} />

@@ -273,7 +273,6 @@ export default function PackagesPage() {
         setMaxPrice(10000);
         setMenuType('');
         setSortBy('created_desc');
-        setPackageType('');
         setOccasionId('');
         setOccasionName('');
         setCuisineTypeName('');

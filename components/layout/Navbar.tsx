@@ -120,7 +120,7 @@ export function Navbar() {
                     >
                         Home
                     </Link>
-                    <Link
+                    {/* <Link
                         href="/packages"
                         className={`text-base font-medium transition-colors duration-200 py-2 ${
                             pathname === '/packages' || pathname?.startsWith('/packages/')
@@ -129,7 +129,7 @@ export function Navbar() {
                         }`}
                     >
                         Packages
-                    </Link>
+                    </Link> */}
                     <Link
                         href="/caterers"
                         className={`text-base font-medium transition-colors duration-200 py-2 ${

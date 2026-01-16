@@ -215,7 +215,7 @@ export default function EditPackagePage() {
           if (info.minimum_guests) {
             setMinimumGuests(info.minimum_guests);
             // Pre-fill form with caterer's minimum_guests if package doesn't have minimum_people set
-            setFormData(prev => ({
+            setFormData((prev: any) => ({
               ...prev,
               minimum_people: prev.minimum_people || info.minimum_guests
             }));

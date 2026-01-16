@@ -281,7 +281,7 @@ export default function OrdersPage() {
                                                         {item.package.caterer.business_name || 'Unknown Caterer'}
                                                     </p>
                                                     <p className="text-xs text-gray-500">
-                                                        {item.package_type.name}
+                                                        Package
                                                     </p>
                                                 </div>
                                                 <div className="text-right shrink-0">
@@ -398,7 +398,7 @@ export default function OrdersPage() {
                                                         {item.package.caterer.business_name || 'Unknown Caterer'}
                                                     </p>
                                                     <p className="text-xs text-gray-500 mb-3">
-                                                        {item.package_type.name}
+                                                        Package
                                                     </p>
 
                                                     {/* Item Details Grid */}
