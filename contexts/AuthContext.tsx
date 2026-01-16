@@ -87,8 +87,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await authApi.getCurrentUser();
       
-      if (response.data?.user) {
-        updateUser(response.data.user);
+      // Backend returns { success: true, data: { user } }
+      // apiRequest wraps it, so response.data = { success: true, data: { user } }
+      const apiResponse = response.data as any;
+      
+      if (apiResponse?.data?.user) {
+        updateUser(apiResponse.data.user);
+      } else if (apiResponse?.user) {
+        // Fallback: direct user object
+        updateUser(apiResponse.user);
       } else if (response.error) {
         const isAuthError = response.status === 401 || 
                            response.status === 403 ||

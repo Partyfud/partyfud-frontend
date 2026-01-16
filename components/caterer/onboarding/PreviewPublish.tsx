@@ -88,12 +88,15 @@ export function PreviewPublish({ data, onBack, onDraftSaved, onSubmitSuccess }: 
       });
       
       // Refresh user data to update their type to CATERER
-      if (onSubmitSuccess) await onSubmitSuccess();
+      // Wait for refreshUser to complete before redirecting
+      if (onSubmitSuccess) {
+        await onSubmitSuccess();
+        // Add a small delay to ensure state is updated
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
       
-      // Redirect to caterer dashboard after a short delay
-      setTimeout(() => {
-        router.push('/caterer/dashboard');
-      }, 2000);
+      // Redirect to caterer dashboard
+      router.push('/caterer/dashboard');
     } catch (error) {
       console.error('Error submitting:', error);
       setSubmitMessage({

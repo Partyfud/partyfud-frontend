@@ -79,6 +79,10 @@ export default function CatererDashboard() {
         setCatererStatus(catererData.data.status);
       } else if (catererData && 'status' in catererData) {
         setCatererStatus(catererData.status);
+      } else {
+        // No caterer info found - default to PENDING to show the notice
+        // This ensures unverified caterers always see the pending notice
+        setCatererStatus('PENDING');
       }
 
       const response = await catererApi.getDashboardStats();

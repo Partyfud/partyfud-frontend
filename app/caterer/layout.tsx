@@ -75,6 +75,7 @@ function CatererLayoutContent({
   const { isOpen, closeSidebar } = useSidebar();
   const router = useRouter();
   const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
+  const [isLoadingStatus, setIsLoadingStatus] = useState(true);
 
   // Close sidebar when window is resized to desktop
   useEffect(() => {
@@ -94,9 +95,9 @@ function CatererLayoutContent({
       if (!user) {
         router.replace('/login');
       } else if (user.type !== 'CATERER') {
-        // Allow users who just submitted their caterer application
-        // They should be redirected to login only if they're not a caterer type
-        router.replace('/login');
+        // If user is not a caterer, redirect to home page instead of login
+        // They might be a regular user who accidentally navigated here
+        router.replace('/');
       }
     }
   }, [user, loading, router]);
@@ -105,32 +106,41 @@ function CatererLayoutContent({
     if (!loading && user && user.type === 'CATERER') {
       // Fetch approval status whenever user changes (regardless of profile_completed)
       fetchApprovalStatus();
+    } else if (!loading) {
+      // If not a caterer or no user, stop loading status
+      setIsLoadingStatus(false);
     }
   }, [user, loading]);
 
   const fetchApprovalStatus = async () => {
+    setIsLoadingStatus(true);
     try {
       const response = await catererApi.getCatererInfo();
-      console.log('Caterer info response:', response);
       
       // The backend returns { success: true, data: catererInfo }
       // apiRequest wraps it, so response.data is the whole backend response
       const catererData = response.data as any;
       
       if (catererData && catererData.success && catererData.data) {
-        console.log('Setting approval status to:', catererData.data.status);
         setApprovalStatus(catererData.data.status);
       } else if (catererData && 'status' in catererData) {
         // Fallback: if the data is directly the catererInfo
-        console.log('Setting approval status to (fallback):', catererData.status);
         setApprovalStatus(catererData.status);
+      } else {
+        // No caterer info found - default to PENDING to be safe
+        setApprovalStatus('PENDING');
       }
     } catch (error) {
       console.error('Error fetching approval status:', error);
+      // On error, default to PENDING to be safe (restrict access)
+      setApprovalStatus('PENDING');
+    } finally {
+      setIsLoadingStatus(false);
     }
   };
 
-  if (loading) {
+  // Show loading while auth is loading OR while fetching approval status
+  if (loading || isLoadingStatus) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#268700]"></div>
@@ -142,16 +152,15 @@ function CatererLayoutContent({
     return null;
   }
 
-  // Disable all navigation except Dashboard when approval is pending
+  // Disable all navigation except Dashboard when approval is pending or not yet fetched
   // Profile, Menus, Packages, Orders, Proposals should be disabled until approved
-  const filteredNavItems = approvalStatus === 'PENDING' 
+  const isPending = approvalStatus === 'PENDING' || approvalStatus === null;
+  const filteredNavItems = isPending 
     ? navItems.map(item => ({
         ...item,
         disabled: item.name !== 'Dashboard'
       }))
     : navItems;
-
-  console.log('Approval status:', approvalStatus, 'Filtered nav items:', filteredNavItems);
 
   return (
     <div className="flex h-screen bg-gray-50">

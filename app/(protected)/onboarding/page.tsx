@@ -67,7 +67,7 @@ export default function CatererOnboardingPage() {
     unavailable_dates: [],
   });
 
-  // Load existing draft data on mount
+  // Load existing draft data on mount and check if already submitted
   useEffect(() => {
     const loadDraftData = async () => {
       try {
@@ -90,6 +90,13 @@ export default function CatererOnboardingPage() {
           const result = await response.json();
           if (result.success && result.data) {
             const draftData = result.data;
+            
+            // If onboarding is already completed, redirect to dashboard
+            // This prevents caterers who already submitted from seeing onboarding again
+            if (draftData.onboarding_completed === true) {
+              router.replace('/caterer/dashboard');
+              return;
+            }
             
             // Map the backend data to frontend state
             setOnboardingData({
@@ -120,7 +127,7 @@ export default function CatererOnboardingPage() {
     };
 
     loadDraftData();
-  }, []);
+  }, [router]);
 
   const progress = (currentStep / 4) * 100;
 

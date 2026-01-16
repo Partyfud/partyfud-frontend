@@ -36,13 +36,10 @@ function LoginContent() {
       setIsLoading(false); // Reset loading when user is available
 
       // Redirect immediately based on user type
+      // Caterers always go to dashboard (even if pending approval)
+      // The dashboard will show appropriate message if verification is pending
       if (user.type === 'CATERER') {
-        // Check if profile is completed, if not redirect to onboarding page
-        if (user.profile_completed === false) {
-          router.replace('/onboarding');
-        } else {
-          router.replace('/caterer/dashboard');
-        }
+        router.replace('/caterer/dashboard');
       } else if (user.type === 'USER') {
         router.replace(redirect || '/');
       } else if (user.type === 'ADMIN') {
@@ -67,13 +64,10 @@ function LoginContent() {
         // Success - redirect immediately based on user data from login response
         const loggedInUser = result.user;
 
+        // Caterers always go to dashboard (even if pending approval)
+        // The dashboard will show appropriate message if verification is pending
         if (loggedInUser.type === 'CATERER') {
-          // Check if profile is completed, if not redirect to onboarding page immediately
-          if (loggedInUser.profile_completed === false) {
-            router.replace('/onboarding');
-          } else {
-            router.replace('/caterer/dashboard');
-          }
+          router.replace('/caterer/dashboard');
         } else if (loggedInUser.type === 'USER') {
           router.replace(redirect || '/');
         } else if (loggedInUser.type === 'ADMIN') {
