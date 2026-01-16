@@ -51,7 +51,7 @@ function SignupContent() {
     try {
       const signupData = {
         ...formData,
-        type: 'USER', // All signups are USER by default, onboarding will change to CATERER
+        type: 'USER' as const, // All signups are USER by default, onboarding will change to CATERER
       };
 
       const result = await signup(signupData);
