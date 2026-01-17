@@ -5,7 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { userApi } from '@/lib/api/user.api';
-import { Trash2, ShoppingBag, Calendar, MapPin, Users, ChevronRight } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Trash2, ShoppingBag, Calendar, MapPin, Users, ChevronRight, Lock } from 'lucide-react';
 import { Toast, useToast } from '@/components/ui/Toast';
 import { formatDate } from '@/lib/constants';
 
@@ -35,25 +36,40 @@ interface CartItem {
 
 export default function CartPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const { toast, showToast, hideToast } = useToast();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [checkingOut, setCheckingOut] = useState(false);
 
   useEffect(() => {
-    fetchCart();
-  }, []);
+    if (!authLoading) {
+      fetchCart();
+    }
+  }, [authLoading, user]);
 
   const fetchCart = async () => {
     setLoading(true);
     try {
-      const res = await userApi.getCartItems();
-      if (res.data?.data) {
-        setCartItems(res.data.data);
+      if (user) {
+        // Fetch from server for authenticated users
+        const res = await userApi.getCartItems();
+        if (res.data?.data) {
+          setCartItems(res.data.data);
+        } else if (res.error && res.status !== 401) {
+          showToast('error', 'Failed to load cart');
+        }
+      } else {
+        // Load from localStorage for non-authenticated users
+        const { cartStorage } = await import('@/lib/utils/cartStorage');
+        const localItems = cartStorage.getItems();
+        setCartItems(localItems as any);
       }
     } catch (err) {
-      showToast('error', 'Failed to load cart');
+      // Silently handle errors for non-authenticated users
+      if (user) {
+        showToast('error', 'Failed to load cart');
+      }
     } finally {
       setLoading(false);
     }
@@ -62,10 +78,17 @@ export default function CartPage() {
   const handleDelete = async (itemId: string) => {
     setDeletingId(itemId);
     try {
-      const res = await userApi.deleteCartItem(itemId);
-      if (res.error) {
-        showToast('error', res.error);
-        return;
+      if (user) {
+        // Delete from server for authenticated users
+        const res = await userApi.deleteCartItem(itemId);
+        if (res.error) {
+          showToast('error', res.error);
+          return;
+        }
+      } else {
+        // Delete from localStorage for non-authenticated users
+        const { cartStorage } = await import('@/lib/utils/cartStorage');
+        cartStorage.removeItem(itemId);
       }
       setCartItems((prev) => prev.filter((item) => item.id !== itemId));
       showToast('success', 'Item removed from cart');
@@ -76,43 +99,26 @@ export default function CartPage() {
     }
   };
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
+    if (!user) {
+      showToast('error', 'Please log in to proceed to checkout');
+      router.push(`/login?redirect=${encodeURIComponent('/checkout')}`);
+      return;
+    }
+
     if (cartItems.length === 0) {
       showToast('error', 'Your cart is empty');
       return;
     }
 
-    setCheckingOut(true);
-    try {
-      const res = await userApi.createOrder({
-        cart_item_ids: cartItems.map((item) => item.id),
-        items: [],
-      });
-
-      if (res.error) {
-        showToast('error', res.error);
-        return;
-      }
-
-      if (res.data?.success) {
-        showToast('success', 'Order placed successfully!');
-        setCartItems([]);
-        setTimeout(() => {
-          router.push('/orders');
-        }, 1500);
-      }
-    } catch (err) {
-      showToast('error', 'Failed to place order');
-    } finally {
-      setCheckingOut(false);
-    }
+    router.push('/checkout');
   };
 
   const subtotal = cartItems.reduce((sum, item) => {
     return sum + (item.price_at_time || item.package.total_price || 0);
   }, 0);
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -146,15 +152,28 @@ export default function CartPage() {
               Your cart is empty
             </h2>
             <p className="text-gray-500 text-sm mb-6">
-              Browse our caterers and packages to get started
+              {user 
+                ? 'Browse our caterers and packages to get started'
+                : 'Log in to see your saved items, or browse our caterers to add items to your cart'}
             </p>
-            <Link
-              href="/caterers"
-              className="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition"
-            >
-              Browse Caterers
-              <ChevronRight className="w-4 h-4" />
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              {!user && (
+                <Link
+                  href={`/login?redirect=${encodeURIComponent('/cart')}`}
+                  className="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition"
+                >
+                  <Lock className="w-4 h-4" />
+                  Log In to View Cart
+                </Link>
+              )}
+              <Link
+                href="/caterers"
+                className="inline-flex items-center gap-2 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition"
+              >
+                Browse Caterers
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -271,14 +290,21 @@ export default function CartPage() {
 
                 <button
                   onClick={handleCheckout}
-                  disabled={checkingOut || cartItems.length === 0}
+                  disabled={cartItems.length === 0}
                   className={`w-full py-3 rounded-lg font-medium transition mb-3 ${
-                    checkingOut || cartItems.length === 0
+                    cartItems.length === 0
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : 'bg-green-600 text-white hover:bg-green-700'
                   }`}
                 >
-                  {checkingOut ? 'Processing...' : 'Proceed to Checkout'}
+                  {!user ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Lock className="w-4 h-4" />
+                      Log In to Checkout
+                    </span>
+                  ) : (
+                    'Proceed to Checkout'
+                  )}
                 </button>
 
                 <Link

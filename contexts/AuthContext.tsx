@@ -138,11 +138,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         updateUser(userObj);
         setLoading(false);
+        
+        // Sync localStorage cart items to server after login
+        try {
+          const { cartStorage } = await import('@/lib/utils/cartStorage');
+          await cartStorage.syncToServer();
+        } catch (syncError) {
+          console.error('Error syncing cart after login:', syncError);
+          // Don't fail login if cart sync fails
+        }
+        
         return { user: userObj };
       }
       
       if (response.data) {
         await refreshUser();
+        
+        // Sync localStorage cart items to server after login
+        try {
+          const { cartStorage } = await import('@/lib/utils/cartStorage');
+          await cartStorage.syncToServer();
+        } catch (syncError) {
+          console.error('Error syncing cart after login:', syncError);
+          // Don't fail login if cart sync fails
+        }
+        
         return {};
       }
       

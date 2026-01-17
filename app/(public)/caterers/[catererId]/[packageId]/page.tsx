@@ -134,13 +134,25 @@ export default function PackageDetailPage() {
 
   // Check if package is in cart
   useEffect(() => {
-    if (!packageId || !user) return;
+    if (!packageId) return;
 
     const checkCart = async () => {
       try {
-        const res = await userApi.getCartItems();
-        if (res.data?.data) {
-          const item = res.data.data.find((i: any) => i.package?.id === packageId);
+        if (user) {
+          // Check server cart for authenticated users
+          const res = await userApi.getCartItems();
+          if (res.data?.data) {
+            const item = res.data.data.find((i: any) => i.package?.id === packageId);
+            if (item) {
+              setIsInCart(true);
+              setCartItemId(item.id);
+            }
+          }
+        } else {
+          // Check localStorage for non-authenticated users
+          const { cartStorage } = await import('@/lib/utils/cartStorage');
+          const localItems = cartStorage.getItems();
+          const item = localItems.find((i) => i.package_id === packageId);
           if (item) {
             setIsInCart(true);
             setCartItemId(item.id);
@@ -195,13 +207,6 @@ export default function PackageDetailPage() {
   const handleAddToCart = async () => {
     if (!pkg) return;
 
-    // Check authentication
-    if (!user) {
-      showToast('error', 'Please log in to add items to cart');
-      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
-      return;
-    }
-
     // Validate form
     if (!eventType) {
       showToast('error', 'Please select an event type');
@@ -226,24 +231,55 @@ export default function PackageDetailPage() {
       const dateObj = new Date(eventDate);
       dateObj.setHours(18, 0, 0, 0);
 
-      const res = await userApi.createCartItem({
-        package_id: pkg.id,
-        location,
-        guests: guestCount,
-        date: dateObj.toISOString(),
-        price_at_time: totalPrice,
-      });
-
-      if (res.error) {
-        showToast('error', res.error);
-        return;
-      }
-
-      if (res.data?.success) {
-        showToast('success', 'Added to cart successfully!');
+      if (!user) {
+        // Store in localStorage for non-authenticated users
+        const { cartStorage } = await import('@/lib/utils/cartStorage');
+        const localItem = cartStorage.addItem({
+          package_id: pkg.id,
+          package: {
+            id: pkg.id,
+            name: pkg.name,
+            people_count: pkg.people_count || pkg.minimum_people || 1,
+            total_price: pkg.total_price,
+            price_per_person: pkg.price_per_person || pkg.total_price / (pkg.people_count || pkg.minimum_people || 1),
+            currency: pkg.currency,
+            cover_image_url: pkg.cover_image_url,
+            caterer: {
+              id: pkg.caterer?.id || '',
+              business_name: (pkg.caterer as any)?.business_name || null,
+              name: (pkg.caterer as any)?.name,
+            },
+          },
+          location,
+          guests: guestCount,
+          date: dateObj.toISOString(),
+          price_at_time: totalPrice,
+        });
+        
+        showToast('success', 'Added to cart! Log in to sync your cart across devices.');
         setIsInCart(true);
-        if (res.data?.data?.id) {
-          setCartItemId(res.data.data.id);
+        setCartItemId(localItem.id);
+      } else {
+        // Add to server cart for authenticated users
+        const res = await userApi.createCartItem({
+          package_id: pkg.id,
+          location,
+          guests: guestCount,
+          date: dateObj.toISOString(),
+          price_at_time: totalPrice,
+        });
+
+        if (res.error) {
+          showToast('error', res.error);
+          return;
+        }
+
+        if (res.data?.success) {
+          showToast('success', 'Added to cart successfully!');
+          setIsInCart(true);
+          if (res.data?.data?.id) {
+            setCartItemId(res.data.data.id);
+          }
         }
       }
     } catch (err) {
@@ -259,10 +295,17 @@ export default function PackageDetailPage() {
 
     setAddingToCart(true);
     try {
-      const res = await userApi.deleteCartItem(cartItemId);
-      if (res.error) {
-        showToast('error', res.error);
-        return;
+      if (user) {
+        // Remove from server for authenticated users
+        const res = await userApi.deleteCartItem(cartItemId);
+        if (res.error) {
+          showToast('error', res.error);
+          return;
+        }
+      } else {
+        // Remove from localStorage for non-authenticated users
+        const { cartStorage } = await import('@/lib/utils/cartStorage');
+        cartStorage.removeItem(cartItemId);
       }
       showToast('success', 'Removed from cart');
       setIsInCart(false);
