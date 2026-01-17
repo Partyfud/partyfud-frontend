@@ -74,12 +74,49 @@ export const cartStorage = {
     if (items.length === 0) return;
 
     const { userApi } = await import('@/lib/api/user.api');
+    const { customPackageStorage } = await import('./customPackageStorage');
     
-    // Try to add each item to server cart
+    // First, sync custom packages to create actual packages on server
+    const customPackages = customPackageStorage.getPackages();
+    const customPackageMap = new Map<string, string>(); // Maps local ID to server package ID
+    
+    for (const customPkg of customPackages) {
+      try {
+        const res = await userApi.createCustomPackage({
+          dish_ids: customPkg.dish_ids,
+          people_count: customPkg.people_count,
+        });
+        
+        if (res.data?.data?.id) {
+          customPackageMap.set(customPkg.id, res.data.data.id);
+        }
+      } catch (err) {
+        console.error('Error syncing custom package to server:', err);
+        // Continue with other packages even if one fails
+      }
+    }
+    
+    // Clear custom packages after sync
+    customPackageStorage.clear();
+    
+    // Now sync cart items to server
     for (const item of items) {
       try {
+        // If this is a custom package, use the mapped server package ID
+        let packageId = item.package_id;
+        if (item.package_id.startsWith('custom_')) {
+          const serverPackageId = customPackageMap.get(item.package_id);
+          if (serverPackageId) {
+            packageId = serverPackageId;
+          } else {
+            // Skip if custom package sync failed
+            console.warn('Skipping cart item with unsynced custom package:', item.package_id);
+            continue;
+          }
+        }
+        
         await userApi.createCartItem({
-          package_id: item.package_id,
+          package_id: packageId,
           location: item.location || undefined,
           guests: item.guests || undefined,
           date: item.date || undefined,

@@ -263,7 +263,7 @@ export default function MenusPage() {
     setCreateFormErrors({});
 
     // Validate required fields
-    if (!createFormData.name || !createFormData.cuisine_type_id || !createFormData.category_id || !createFormData.price) {
+    if (!createFormData.name || !createFormData.cuisine_type_id || !createFormData.price) {
       setCreateFormErrors({ general: 'Please fill in all required fields' });
       setIsCreating(false);
       return;
@@ -495,7 +495,7 @@ export default function MenusPage() {
                     placeholder="Select Cuisine Type"
                   />
                   <Select
-                    label="Category *"
+                    label="Category"
                     options={categories}
                     value={createFormData.category_id}
                     onChange={(e) => {

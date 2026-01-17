@@ -285,7 +285,7 @@ export default function EditMenuItemPage() {
                 error={formErrors.cuisine_type_id}
               />
               <Select
-                label="Category *"
+                label="Category"
                 options={categories}
                 value={formData.category_id?.toString() || ''}
                 onChange={(e) => handleCategoryChange(e.target.value)}

@@ -1,7 +1,6 @@
 'use client';
 
 import { Button } from '@/components/ui/Button';
-import { DatePicker } from '@/components/ui/DatePicker';
 import { useState } from 'react';
 
 interface AvailabilityLogisticsProps {
@@ -69,7 +68,6 @@ export function AvailabilityLogistics({
 }: AvailabilityLogisticsProps) {
   const [selectedDelivery, setSelectedDelivery] = useState<string[]>([]);
   const [selectedStaffing, setSelectedStaffing] = useState<string[]>([]);
-  const [unavailableDates, setUnavailableDates] = useState<string[]>(data.unavailable_dates || []);
 
   const toggleDeliveryOption = (id: string) => {
     if (selectedDelivery.includes(id)) {
@@ -95,7 +93,6 @@ export function AvailabilityLogistics({
     updateData({
       staff: staffCount,
       servers: serversCount,
-      unavailable_dates: unavailableDates,
     });
 
     onNext();
@@ -241,19 +238,6 @@ export function AvailabilityLogistics({
             );
           })}
         </div>
-      </div>
-
-      {/* Unavailable Dates */}
-      <div>
-        <DatePicker
-          selectedDates={unavailableDates}
-          onDatesChange={setUnavailableDates}
-          label="Unavailable Dates"
-          minDate={new Date().toISOString().split('T')[0]}
-        />
-        <p className="text-sm text-gray-600 mt-2">
-          Click on dates to block them from booking. You can update this calendar anytime after onboarding.
-        </p>
       </div>
 
       <div className="flex items-center justify-between pt-4">

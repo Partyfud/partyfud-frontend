@@ -1,7 +1,8 @@
 'use client';
 
 import { Package } from '@/lib/api/user.api';
-import { Check } from 'lucide-react';
+import { Check, Eye } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface PackageCardProps {
   pkg: Package;
@@ -9,6 +10,7 @@ interface PackageCardProps {
   onSelect: () => void;
   guestCount: number;
   showCustomBadge?: boolean;
+  catererId?: string;
 }
 
 export function PackageCard({
@@ -17,7 +19,16 @@ export function PackageCard({
   onSelect,
   guestCount,
   showCustomBadge = false,
+  catererId,
 }: PackageCardProps) {
+  const router = useRouter();
+
+  const handleViewAllDishes = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card selection
+    if (catererId) {
+      router.push(`/caterers/${catererId}/${pkg.id}`);
+    }
+  };
   
   // Format menu items for display
   const getMenuSummary = () => {
@@ -92,6 +103,15 @@ export function PackageCard({
             <p className="text-gray-400 italic">
               +{Object.keys(menuSummary).length - 4} more categories
             </p>
+          )}
+          {catererId && (
+            <button
+              onClick={handleViewAllDishes}
+              className="flex items-center gap-1.5 mt-2 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              View all dishes
+            </button>
           )}
         </div>
       )}

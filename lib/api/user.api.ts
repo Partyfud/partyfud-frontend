@@ -20,7 +20,7 @@ export interface Caterer {
   name: string;
   first_name: string;
   last_name: string;
-  company_name?: string;
+  business_name?: string;
   email: string;
   phone: string;
   image_url?: string;

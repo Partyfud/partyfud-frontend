@@ -285,7 +285,7 @@ export default function ApprovalsDashboard() {
                         <span className="font-medium w-16">Phone:</span>
                         <span>{c.phone}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <div className="flex items-center gap-6 text-sm text-gray-600">
                         <span className="font-medium w-16">Registered:</span>
                         <span>{c.registered}</span>
                       </div>

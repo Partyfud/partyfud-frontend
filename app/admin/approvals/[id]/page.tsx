@@ -395,7 +395,7 @@ export default function CatererDetailPage() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Food License</label>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mr-3">Food License</label>
                 {catererInfo.food_license ? (
                   <a
                     href={catererInfo.food_license}
@@ -411,7 +411,7 @@ export default function CatererDetailPage() {
                 )}
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Registration</label>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mr-3">Registration</label>
                 {catererInfo.Registration ? (
                   <a
                     href={catererInfo.Registration}

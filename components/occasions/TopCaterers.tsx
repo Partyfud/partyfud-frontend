@@ -92,7 +92,7 @@ export default function TopCaterers({ occasionId, occasionName }: TopCaterersPro
               <div className="relative h-[250px] bg-gray-100">
                 <Image
                   src={caterer.image_url || '/user/default-caterer.jpg'}
-                  alt={caterer.company_name || caterer.name}
+                  alt={caterer.business_name || caterer.name}
                   fill
                   className="object-cover"
                   onError={(e) => {
@@ -112,7 +112,7 @@ export default function TopCaterers({ occasionId, occasionName }: TopCaterersPro
                 </div>
 
                 <h3 className="text-xl font-semibold mb-2 text-gray-900">
-                  {caterer.company_name || caterer.name}
+                  {caterer.business_name || caterer.name}
                 </h3>
 
                 <p className="text-gray-600 text-sm mb-3">

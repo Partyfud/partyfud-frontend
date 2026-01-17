@@ -5,21 +5,17 @@ import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { catererApi, UpdatePackageRequest, Package } from '@/lib/api/caterer.api';
+import { catererApi, UpdatePackageRequest, Package, Dish } from '@/lib/api/caterer.api';
 import { userApi } from '@/lib/api/user.api';
 
-// Component for package item card with images
-interface PackageItemCardProps {
-  item: { id: string; dish: { name: string; image_url?: string | null }; people_count: number; quantity: string };
+// Component for dish card with image
+interface DishCardProps {
+  dish: Dish;
   isSelected: boolean;
   onToggle: () => void;
 }
 
-const PackageItemCard: React.FC<PackageItemCardProps> = ({ item, isSelected, onToggle }) => {
-  const [imageError, setImageError] = useState(false);
-  const fallbackImage = `https://source.unsplash.com/400x300/?food,${encodeURIComponent(item.dish.name || 'delicious')}`;
-  const displayImage = item.dish.image_url && !imageError ? item.dish.image_url : fallbackImage;
-
+const DishCard: React.FC<DishCardProps> = ({ dish, isSelected, onToggle }) => {
   return (
     <label
       className={`block bg-white rounded-lg shadow overflow-hidden transition-all cursor-pointer ${isSelected
@@ -27,16 +23,6 @@ const PackageItemCard: React.FC<PackageItemCardProps> = ({ item, isSelected, onT
         : 'hover:shadow-md'
         }`}
     >
-      {/* Image - Full width, fully visible */}
-      <div className="w-full h-48 bg-gray-200 flex items-center justify-center overflow-hidden">
-        <img
-          src={displayImage}
-          alt={item.dish.name}
-          className="w-full h-full object-cover"
-          onError={() => setImageError(true)}
-        />
-      </div>
-
       {/* Content */}
       <div className="p-4">
         <div className="flex items-start gap-3 mb-2">
@@ -48,9 +34,9 @@ const PackageItemCard: React.FC<PackageItemCardProps> = ({ item, isSelected, onT
             className="mt-1 w-4 h-4 text-[#268700] border-gray-300 rounded focus:ring-[#268700] flex-shrink-0 cursor-pointer"
           />
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-lg text-gray-900 mb-1">{item.dish.name}</h3>
+            <h3 className="font-semibold text-lg text-gray-900 mb-1">{dish.name}</h3>
             <p className="text-sm text-gray-700">
-              {item.people_count} People • Qty: {item.quantity}
+              {dish.price ? `${dish.currency || 'AED'} ${Number(dish.price).toFixed(2)}` : 'Price not set'}
             </p>
           </div>
         </div>
@@ -137,10 +123,11 @@ export default function EditPackagePage() {
   const [loading, setLoading] = useState(true);
   const [occasions, setOccasions] = useState<Array<{ id: string; name: string }>>([]);
   const [categories, setCategories] = useState<Array<{ id: string; name: string; description?: string | null }>>([]);
-  const [packageItemsByCategory, setPackageItemsByCategory] = useState<Array<{
+  const [dishesByCategory, setDishesByCategory] = useState<Array<{
     category: { id: string; name: string; description?: string | null };
-    items: Array<{ id: string; dish: { name: string; image_url?: string | null }; people_count: number; quantity: string }>;
+    dishes: Array<Dish>;
   }>>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [minimumGuests, setMinimumGuests] = useState<number | null>(null);
   const DEFAULT_COVER = "/cover.png";
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -149,8 +136,13 @@ export default function EditPackagePage() {
 
   useEffect(() => {
     fetchPackage();
-    fetchMetadata();
   }, [packageId]);
+
+  useEffect(() => {
+    if (packageData) {
+      fetchMetadata();
+    }
+  }, [packageData]);
 
   const fetchPackage = async () => {
     setLoading(true);
@@ -173,6 +165,11 @@ export default function EditPackagePage() {
 
       // Initialize form with current package data
       // Support both minimum_people and people_count during migration
+      const packageItems = pkg.items || pkg.package_items || [];
+      // Extract dish IDs from package items (for both FIXED and CUSTOMISABLE)
+      const dishIds = packageItems.map((item: any) => item.dish?.id || item.dish_id).filter(Boolean);
+      const categorySelections = pkg.category_selections || [];
+      
       const initialFormData = {
         name: pkg.name || '',
         description: (pkg as any).description || '',
@@ -184,10 +181,13 @@ export default function EditPackagePage() {
         is_available: pkg.is_available ?? true,
         customisation_type: pkg.customisation_type || 'FIXED',
         additional_info: pkg.additional_info || '', // Extra pricing and services information
-        package_item_ids: pkg.items?.map((item: any) => item.id) || pkg.package_items?.map((item: any) => item.id) || [],
-        category_selections: pkg.category_selections || [],
+        package_item_ids: dishIds, // Store dish IDs, not package item IDs
+        category_selections: categorySelections,
       };
       console.log('📝 Setting form data:', initialFormData);
+      console.log('📦 Package items:', packageItems);
+      console.log('📦 Dish IDs:', dishIds);
+      console.log('📦 Category selections:', categorySelections);
       setFormData(initialFormData);
 
       // Set image preview
@@ -245,8 +245,8 @@ export default function EditPackagePage() {
         }
       }
 
-      // Fetch draft package items (items without package_id)
-      await fetchPackageItems();
+      // Fetch dishes grouped by category
+      await fetchDishes();
     } catch (error) {
       console.error('Error fetching metadata:', error);
     } finally {
@@ -254,75 +254,77 @@ export default function EditPackagePage() {
     }
   };
 
-  const fetchPackageItems = async () => {
+  const fetchDishes = async () => {
     try {
-      // Fetch draft items (items without package_id) for editing package
-      const itemsResponse = await (catererApi as any).getAllPackageItems(undefined, true);
-      console.log('📦 [fetchPackageItems] API Response:', itemsResponse);
+      const response = await catererApi.getAllDishes({ group_by_category: true });
+      if (response.data) {
+        const data = response.data as any;
+        const responseData = data.data || data;
 
-      // Backend returns: { success: true, data: { categories: [...] } }
-      // apiRequest wraps it: { data: { success: true, data: { categories: [...] } } }
-      if (itemsResponse?.data) {
-        const responseData = itemsResponse.data as any;
-        console.log('📦 [fetchPackageItems] Response data:', responseData);
-
-        // Access the nested data structure - backend response has data.data.categories
-        const categoriesData = responseData.data || responseData;
-        console.log('📦 [fetchPackageItems] Categories data:', categoriesData);
-
-        // New API structure: { categories: [{ category: {...}, items: [...] }] }
-        if (categoriesData?.categories && Array.isArray(categoriesData.categories)) {
-          console.log('📦 [fetchPackageItems] Found categories:', categoriesData.categories.length);
-
-          // Ensure each category has items as an array and normalize item properties
-          const normalizedCategories = categoriesData.categories.map((cat: any) => {
-            const items = Array.isArray(cat.items)
-              ? cat.items.map((item: any) => ({
-                ...item,
-                quantity: String(item.quantity || 1) // Convert quantity to string
-              }))
-              : [];
-
-            console.log(`📦 [fetchPackageItems] Category "${cat.category?.name || 'Unknown'}": ${items.length} items`);
-
-            return {
-              category: cat.category || cat,
-              items: items
-            };
-          });
-
-          console.log('📦 [fetchPackageItems] Setting normalized categories:', normalizedCategories.length);
-          setPackageItemsByCategory(normalizedCategories);
+        if (responseData.categories && Array.isArray(responseData.categories)) {
+          setDishesByCategory(responseData.categories);
         } else {
-          console.warn('📦 [fetchPackageItems] No categories found, using fallback');
-          // Fallback for old structure (if API hasn't updated yet)
-          const itemsList = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.data || []);
-          // Convert flat array to category structure
-          setPackageItemsByCategory([{
-            category: { id: 'all', name: 'All Items', description: null },
-            items: Array.isArray(itemsList) ? itemsList.map((item: any) => ({
-              ...item,
-              quantity: String(item.quantity || 1)
-            })) : []
+          const dishesList = Array.isArray(data) ? data : (data.data || []);
+          setDishesByCategory([{
+            category: { id: 'all', name: 'All Dishes', description: null },
+            dishes: Array.isArray(dishesList) ? dishesList : []
           }]);
         }
-      } else {
-        console.warn('📦 [fetchPackageItems] No data in response');
-        setPackageItemsByCategory([]);
       }
     } catch (error) {
-      console.error('❌ [fetchPackageItems] Error fetching package items:', error);
-      // Set empty state on error
-      setPackageItemsByCategory([]);
+      console.error('Error fetching dishes:', error);
+      setDishesByCategory([]);
     }
   };
 
-  // Helper function to get all items from all categories (for selected items summary)
-  const getAllItems = () => {
-    return packageItemsByCategory.flatMap(category =>
-      Array.isArray(category.items) ? category.items : []
+  // Helper function to get all dishes from all categories
+  const getAllDishes = () => {
+    return dishesByCategory.flatMap(category =>
+      Array.isArray(category.dishes) ? category.dishes : []
     );
   };
+
+  // Filter dishes based on search query
+  const getFilteredDishesByCategory = () => {
+    let filteredCategories = dishesByCategory;
+
+    // Apply search filter if query exists
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filteredCategories = dishesByCategory
+        .map(categoryGroup => ({
+          ...categoryGroup,
+          dishes: categoryGroup.dishes.filter((dish: Dish) =>
+            dish.name.toLowerCase().includes(query)
+          )
+        }));
+    }
+
+    // Always filter out categories with 0 dishes
+    return filteredCategories.filter(categoryGroup => categoryGroup.dishes.length > 0);
+  };
+
+  // Calculate package price from selected dishes
+  const calculatePackagePrice = (): number => {
+    const minPeople = formData.minimum_people || minimumGuests;
+    if (!formData.package_item_ids || formData.package_item_ids.length === 0 || !minPeople || minPeople <= 0) {
+      return 0;
+    }
+
+    const allDishes = getAllDishes();
+    const selectedDishes = allDishes.filter((dish: Dish) => formData.package_item_ids?.includes(dish.id));
+    
+    let totalPrice = 0;
+    selectedDishes.forEach((dish) => {
+      // Calculate price: dish.price * minimum_people
+      // Note: This is a simplified calculation - backend will handle actual calculation
+      const price = typeof dish.price === 'number' ? dish.price : Number(dish.price) || 0;
+      totalPrice += price * (minPeople || 1);
+    });
+
+    return totalPrice;
+  };
+
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -332,49 +334,21 @@ export default function EditPackagePage() {
     setImagePreview(URL.createObjectURL(file));
   };
 
-  const handleItemToggle = (itemId: string) => {
+  const handleDishToggle = (dishId: string) => {
     const currentIds = formData.package_item_ids || [];
-    if (currentIds.includes(itemId)) {
+    if (currentIds.includes(dishId)) {
       setFormData({
         ...formData,
-        package_item_ids: currentIds.filter((id: string) => id !== itemId),
+        package_item_ids: currentIds.filter((id: string) => id !== dishId),
       });
     } else {
       setFormData({
         ...formData,
-        package_item_ids: [...currentIds, itemId],
+        package_item_ids: [...currentIds, dishId],
       });
     }
   };
 
-  const handleCategorySelectionChange = (categoryId: string, numDishesToSelect: number | null) => {
-    const currentSelections = formData.category_selections || [];
-    const existingIndex = currentSelections.findIndex((cs: { category_id: string; num_dishes_to_select: number | null }) => cs.category_id === categoryId);
-
-    let newSelections: Array<{ category_id: string; num_dishes_to_select: number | null }>;
-
-    if (numDishesToSelect === null && existingIndex >= 0) {
-      // Remove selection if setting to null
-      newSelections = currentSelections.filter((cs: { category_id: string; num_dishes_to_select: number | null }) => cs.category_id !== categoryId);
-    } else if (existingIndex >= 0) {
-      // Update existing
-      newSelections = [...currentSelections];
-      newSelections[existingIndex] = { category_id: categoryId, num_dishes_to_select: numDishesToSelect };
-    } else {
-      // Add new
-      newSelections = [...currentSelections, { category_id: categoryId, num_dishes_to_select: numDishesToSelect }];
-    }
-
-    setFormData({
-      ...formData,
-      category_selections: newSelections,
-    });
-  };
-
-  const getCategorySelectionLimit = (categoryId: string): number | null => {
-    const selection = formData.category_selections?.find((cs: { category_id: string; num_dishes_to_select: number | null }) => cs.category_id === categoryId);
-    return selection?.num_dishes_to_select ?? null;
-  };
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -391,9 +365,40 @@ export default function EditPackagePage() {
       setErrors({ minimum_people: 'Minimum people must be greater than 0' });
       return;
     }
-    if (!formData.package_item_ids || formData.package_item_ids.length === 0) {
-      setErrors({ package_item_ids: 'At least one package item must be selected' });
-      return;
+    // Validation based on package type
+    if (formData.customisation_type === 'FIXED') {
+      if (!formData.package_item_ids || formData.package_item_ids.length === 0) {
+        setErrors({ package_item_ids: 'At least one dish must be selected for fixed packages' });
+        return;
+      }
+    } else if (formData.customisation_type === 'CUSTOMISABLE') {
+      if (!formData.package_item_ids || formData.package_item_ids.length === 0) {
+        setErrors({ package_item_ids: 'At least one dish must be selected for customizable packages' });
+        return;
+      }
+      // Validate that each category with selected dishes has a selection limit set
+      const categoriesWithDishes = new Set<string>();
+      dishesByCategory.forEach(cg => {
+        const selectedInCategory = (formData.package_item_ids || []).filter((id: string) =>
+          cg.dishes.some((d: Dish) => d.id === id)
+        );
+        if (selectedInCategory.length > 0) {
+          categoriesWithDishes.add(cg.category.id);
+        }
+      });
+      
+      const categoriesWithLimits = new Set(
+        (formData.category_selections || []).map((s: { category_id: string; num_dishes_to_select: number | null }) => s.category_id)
+      );
+      
+      const missingLimits = Array.from(categoriesWithDishes).filter(
+        catId => !categoriesWithLimits.has(catId)
+      );
+      
+      if (missingLimits.length > 0) {
+        setErrors({ category_selections: 'Please set selection limits for all categories with selected dishes' });
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -401,17 +406,7 @@ export default function EditPackagePage() {
     const response = await catererApi.updatePackage(packageId, formData, selectedImage || undefined);
 
     if (response.error) {
-      // Handle specific error cases with user-friendly messages
-      let errorMessage = response.error;
-
-      if (errorMessage.includes('Foreign key') || errorMessage.includes('constraint')) {
-        errorMessage = 'Unable to update package due to invalid data. Please check all fields.';
-      } else if (errorMessage.includes('not found') || errorMessage.includes('permission')) {
-        errorMessage = 'Package not found or you do not have permission to edit it.';
-      }
-
-      setErrors({ general: errorMessage });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setErrors({ general: response.error });
       setIsSubmitting(false);
       return;
     }
@@ -441,9 +436,9 @@ export default function EditPackagePage() {
       <div className="max-w-7xl mx-auto">
         {/* Breadcrumbs */}
         <div className="mb-4 text-sm text-gray-600">
-          <span>Packages</span>
+          <span>Set Menu</span>
           <span className="mx-2">/</span>
-          <span className="text-gray-900 font-medium">Edit Package</span>
+          <span className="text-gray-900 font-medium">Edit Menu</span>
         </div>
 
         {/* Back Button and Title */}
@@ -456,7 +451,7 @@ export default function EditPackagePage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">Edit Package</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Edit Menu</h1>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -502,22 +497,6 @@ export default function EditPackagePage() {
                     error={errors.minimum_people}
                   />
                 </div>
-
-                {/* Package Description */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Package Description
-                  </label>
-                  <textarea
-                    value={formData.description || ''}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Enter package description (e.g., Authentic cuisine with fresh ingredients. Perfect for sophisticated palates.)"
-                    rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#268700] focus:border-transparent resize-none"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">This will be displayed on the package cards</p>
-                </div>
-
                 <div>
                   {/* Occasions - Multiple Selection with Checkboxes */}
                   <div>
@@ -556,48 +535,6 @@ export default function EditPackagePage() {
                     )}
                   </div>
 
-                  {/* Customisation Type Selection */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Selection Type <span className="text-red-500">*</span>
-                    </label>
-                    <div className="grid grid-cols-2 gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <label className="flex items-center gap-2 cursor-pointer hover:bg-white p-3 rounded transition border-2 border-transparent hover:border-[#268700]">
-                        <input
-                          type="radio"
-                          name="customisation_type"
-                          value="FIXED"
-                          checked={formData.customisation_type === 'FIXED'}
-                          onChange={(e) => setFormData({ ...formData, customisation_type: 'FIXED' })}
-                          className="w-4 h-4 text-[#268700] border-gray-300 focus:ring-[#268700]"
-                        />
-                        <div>
-                          <span className="text-sm font-semibold text-gray-900">Customisable Package</span>
-                          <p className="text-xs text-gray-500 mt-0.5">Set limits on category selections</p>
-                        </div>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer hover:bg-white p-3 rounded transition border-2 border-transparent hover:border-[#268700]">
-                        <input
-                          type="radio"
-                          name="customisation_type"
-                          value="CUSTOMISABLE"
-                          checked={formData.customisation_type === 'CUSTOMISABLE'}
-                          onChange={(e) => {
-                            setFormData({
-                              ...formData,
-                              customisation_type: 'CUSTOMISABLE',
-                              category_selections: [] // Clear category selections for CUSTOMISABLE
-                            });
-                          }}
-                          className="w-4 h-4 text-[#268700] border-gray-300 focus:ring-[#268700]"
-                        />
-                        <div>
-                          <span className="text-sm font-semibold text-gray-900">Fixed Package</span>
-                          <p className="text-xs text-gray-500 mt-0.5">Users can select any items</p>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
 
                   {/* <Input
                     label="Rating (Optional)"
@@ -685,31 +622,35 @@ export default function EditPackagePage() {
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">Package Items</h2>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {formData.customisation_type === 'FIXED' ? 'Package Items' : 'Category Selections'}
+                </h2>
                 <p className="text-sm text-gray-600 mt-1">
-                  Select items to include in this package
+                  {formData.customisation_type === 'FIXED'
+                    ? 'Select specific dishes to include in this package'
+                    : 'Select categories and set how many dishes users can choose from each'}
                 </p>
               </div>
             </div>
 
-            {/* Selected Items Summary */}
-            {formData.package_item_ids && formData.package_item_ids.length > 0 && (
+            {/* FIXED Package: Selected Dishes Summary */}
+            {formData.customisation_type === 'FIXED' && formData.package_item_ids && formData.package_item_ids.length > 0 && (
               <div className="mb-4 p-3 bg-[#e8f5e0] rounded-lg border border-[#268700]/20">
                 <p className="text-sm font-semibold text-[#1a5a00] mb-2">
-                  {formData.package_item_ids.length} item(s) selected
+                  {formData.package_item_ids.length} dish(es) selected
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {getAllItems()
-                    .filter((item: { id: string; dish: { name: string; image_url?: string | null }; people_count: number; quantity: string }) => formData.package_item_ids?.includes(item.id))
-                    .map((item) => (
+                  {getAllDishes()
+                    .filter((dish: Dish) => formData.package_item_ids?.includes(dish.id))
+                    .map((dish: Dish) => (
                       <span
-                        key={item.id}
+                        key={dish.id}
                         className="inline-flex items-center gap-2 px-3 py-1 bg-white text-[#1a5a00] rounded-full text-sm border border-[#268700]/30"
                       >
-                        {item.dish.name}
+                        {dish.name}
                         <button
                           type="button"
-                          onClick={() => handleItemToggle(item.id)}
+                          onClick={() => handleDishToggle(dish.id)}
                           className="text-[#268700] hover:text-[#1a5a00] font-bold"
                         >
                           ×
@@ -720,88 +661,235 @@ export default function EditPackagePage() {
               </div>
             )}
 
-            {/* Package Items List - Grouped by Category */}
-            {loadingMetadata ? (
-              <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#268700]"></div>
+            {/* CUSTOMISABLE Package: Summary */}
+            {formData.customisation_type === 'CUSTOMISABLE' && formData.package_item_ids && formData.package_item_ids.length > 0 && (
+              <div className="mb-4 p-3 bg-[#e8f5e0] rounded-lg border border-[#268700]/20">
+                <p className="text-sm font-semibold text-[#1a5a00] mb-2">
+                  {formData.package_item_ids.length} dish{formData.package_item_ids.length === 1 ? '' : 'es'} selected across {formData.category_selections?.length || 0} categor{formData.category_selections?.length === 1 ? 'y' : 'ies'}
+                </p>
+                {formData.category_selections && formData.category_selections.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.category_selections.map((selection: { category_id: string; num_dishes_to_select: number | null }, idx: number) => {
+                      const category = categories.find(c => c.id === selection.category_id);
+                      const categoryDishIds = dishesByCategory.find(cg => cg.category.id === selection.category_id)?.dishes.map((d: Dish) => d.id) || [];
+                      const selectedInCategory = (formData.package_item_ids || []).filter((id: string) => categoryDishIds.includes(id));
+                      return (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-2 px-3 py-1 bg-white text-[#1a5a00] rounded-full text-sm border border-[#268700]/30"
+                        >
+                          {category?.name || 'Unknown'}: {selectedInCategory.length} available, select {selection.num_dishes_to_select === null ? 'all' : selection.num_dishes_to_select}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            ) : getAllItems().length === 0 ? (
-              <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-                <p className="text-gray-500">No package items available</p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {packageItemsByCategory.map((categoryGroup) => {
-                  const currentLimit = getCategorySelectionLimit(categoryGroup.category.id);
-                  return (
-                    <div key={categoryGroup.category.id} className="space-y-4">
-                      {/* Category Header */}
-                      <div className="flex items-center justify-between pb-2 border-b border-gray-200">
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {categoryGroup.category.name}
-                          </h3>
-                          <span className="text-sm text-gray-500">
-                            ({Array.isArray(categoryGroup.items) ? categoryGroup.items.length : 0} {Array.isArray(categoryGroup.items) && categoryGroup.items.length === 1 ? 'item' : 'items'})
-                          </span>
-                          {categoryGroup.category.description && (
-                            <span className="text-sm text-gray-400 italic">
-                              - {categoryGroup.category.description}
+            )}
+
+            {/* FIXED Package: Dishes List - Grouped by Category */}
+            {formData.customisation_type === 'FIXED' && (
+              <>
+                {loadingMetadata ? (
+                  <div className="flex justify-center items-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#268700]"></div>
+                  </div>
+                ) : getAllDishes().length === 0 ? (
+                  <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
+                    <p className="text-gray-500">No dishes available. Please add dishes to your menu first.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {getFilteredDishesByCategory().map((categoryGroup) => (
+                      <div key={categoryGroup.category.id} className="space-y-4">
+                        {/* Category Header */}
+                        <div className="flex items-center justify-between pb-2 border-b border-gray-200">
+                          <div className="flex items-center gap-3">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {categoryGroup.category.name}
+                            </h3>
+                            <span className="text-sm text-gray-500">
+                              ({categoryGroup.dishes.length} {categoryGroup.dishes.length === 1 ? 'dish' : 'dishes'})
                             </span>
-                          )}
+                            {categoryGroup.category.description && (
+                              <span className="text-sm text-gray-400 italic">
+                                - {categoryGroup.category.description}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
-                        {/* Category Selection Limit Dropdown - Only for FIXED packages */}
-                        {formData.customisation_type === 'FIXED' && (
-                          <div className="flex items-center gap-2">
-                            <label className="text-sm text-gray-600 whitespace-nowrap">Select any:</label>
-                            <select
-                              value={currentLimit === null ? 'all' : currentLimit.toString()}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                if (value === 'all') {
-                                  handleCategorySelectionChange(categoryGroup.category.id, null);
-                                } else {
-                                  const num = parseInt(value, 10);
-                                  if (!isNaN(num) && num > 0) {
-                                    handleCategorySelectionChange(categoryGroup.category.id, num);
-                                  }
-                                }
-                              }}
-                              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#268700] focus:border-transparent bg-white text-gray-900 min-w-[100px]"
-                            >
-                              <option value="all">All</option>
-                              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                                <option key={num} value={num.toString()}>
-                                  {num}
-                                </option>
-                              ))}
-                            </select>
+                        {/* Dishes Grid for this Category */}
+                        {categoryGroup.dishes.length === 0 ? (
+                          <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
+                            <p className="text-sm text-gray-400">No dishes in this category</p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {categoryGroup.dishes.map((dish) => (
+                              <DishCard
+                                key={dish.id}
+                                dish={dish}
+                                isSelected={formData.package_item_ids?.includes(dish.id) || false}
+                                onToggle={() => handleDishToggle(dish.id)}
+                              />
+                            ))}
                           </div>
                         )}
                       </div>
+                    ))}
+                    {getFilteredDishesByCategory().length === 0 && searchQuery.trim() && (
+                      <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
+                        <p className="text-gray-500">No dishes found matching "{searchQuery}"</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
 
-                      {/* Items Grid for this Category */}
-                      {!Array.isArray(categoryGroup.items) || categoryGroup.items.length === 0 ? (
-                        <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
-                          <p className="text-sm text-gray-400">No items in this category</p>
+            {/* CUSTOMISABLE Package: Dishes List - Grouped by Category with Selection Limits */}
+            {formData.customisation_type === 'CUSTOMISABLE' && (
+              <>
+                {loadingMetadata ? (
+                  <div className="flex justify-center items-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#268700]"></div>
+                  </div>
+                ) : getAllDishes().length === 0 ? (
+                  <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
+                    <p className="text-gray-500">No dishes available. Please add dishes to your menu first.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {getFilteredDishesByCategory().map((categoryGroup) => {
+                      // Get selected dishes for this category
+                      const categoryDishIds = categoryGroup.dishes.map((d: Dish) => d.id);
+                      const selectedDishesInCategory = (formData.package_item_ids || []).filter((id: string) => categoryDishIds.includes(id));
+                      const existingSelection = formData.category_selections?.find((s: { category_id: string; num_dishes_to_select: number | null }) => s.category_id === categoryGroup.category.id);
+                      
+                      return (
+                        <div key={categoryGroup.category.id} className="space-y-4 p-4 border-2 border-gray-200 rounded-lg">
+                          {/* Category Header with Selection Limit */}
+                          <div className="flex items-center justify-between pb-2 border-b border-gray-200">
+                            <div className="flex items-center gap-3">
+                              <h3 className="text-lg font-semibold text-gray-900">
+                                {categoryGroup.category.name}
+                              </h3>
+                              <span className="text-sm text-gray-500">
+                                ({categoryGroup.dishes.length} {categoryGroup.dishes.length === 1 ? 'dish' : 'dishes'})
+                              </span>
+                              {categoryGroup.category.description && (
+                                <span className="text-sm text-gray-400 italic">
+                                  - {categoryGroup.category.description}
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Selection Limit Dropdown */}
+                            {selectedDishesInCategory.length > 0 && (
+                              <div className="flex items-center gap-2">
+                                <label className="text-sm text-gray-600 whitespace-nowrap">Users must select:</label>
+                                <select
+                                  value={existingSelection?.num_dishes_to_select === null ? 'all' : existingSelection?.num_dishes_to_select?.toString() || 'all'}
+                                  onChange={(e) => {
+                                    const value = e.target.value === 'all' ? null : parseInt(e.target.value, 10);
+                                    const currentSelections = formData.category_selections || [];
+                                    const existingIdx = currentSelections.findIndex((s: { category_id: string; num_dishes_to_select: number | null }) => s.category_id === categoryGroup.category.id);
+                                    
+                                    let updated;
+                                    if (existingIdx >= 0) {
+                                      updated = [...currentSelections];
+                                      updated[existingIdx] = { category_id: categoryGroup.category.id, num_dishes_to_select: value };
+                                    } else {
+                                      updated = [...currentSelections, { category_id: categoryGroup.category.id, num_dishes_to_select: value }];
+                                    }
+                                    
+                                    setFormData({ ...formData, category_selections: updated });
+                                  }}
+                                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#268700] bg-white text-gray-900 min-w-[120px]"
+                                >
+                                  <option value="all">All selected</option>
+                                  {Array.from({ length: Math.min(selectedDishesInCategory.length, 10) }, (_, i) => i + 1).map((num: number) => (
+                                    <option key={num} value={num.toString()}>
+                                      {num} {num === 1 ? 'dish' : 'dishes'}
+                                    </option>
+                                  ))}
+                                </select>
+                                <span className="text-xs text-gray-500">
+                                  (from {selectedDishesInCategory.length} available)
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Dishes Grid for this Category */}
+                          {categoryGroup.dishes.length === 0 ? (
+                            <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
+                              <p className="text-sm text-gray-400">No dishes in this category</p>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {categoryGroup.dishes.map((dish) => (
+                                <DishCard
+                                  key={dish.id}
+                                  dish={dish}
+                                  isSelected={formData.package_item_ids?.includes(dish.id) || false}
+                                  onToggle={() => {
+                                    const currentIds = formData.package_item_ids || [];
+                                    const isCurrentlySelected = currentIds.includes(dish.id);
+                                    const newIds = isCurrentlySelected
+                                      ? currentIds.filter((id: string) => id !== dish.id)
+                                      : [...currentIds, dish.id];
+                                    
+                                    // Update category selections based on selected dishes
+                                    const categoryDishIds = categoryGroup.dishes.map((d: Dish) => d.id);
+                                    const selectedInCategory = newIds.filter((id: string) => categoryDishIds.includes(id));
+                                    const currentSelections = formData.category_selections || [];
+                                    const hasCategorySelection = currentSelections.some((s: { category_id: string; num_dishes_to_select: number | null }) => s.category_id === categoryGroup.category.id);
+                                    
+                                    let updatedSelections = [...currentSelections];
+                                    
+                                    if (selectedInCategory.length > 0 && !hasCategorySelection) {
+                                      // First dish in category selected, add category selection
+                                      updatedSelections.push({ category_id: categoryGroup.category.id, num_dishes_to_select: null });
+                                    } else if (selectedInCategory.length === 0 && hasCategorySelection) {
+                                      // All dishes removed from category, remove category selection
+                                      updatedSelections = updatedSelections.filter((s: { category_id: string; num_dishes_to_select: number | null }) => s.category_id !== categoryGroup.category.id);
+                                    }
+                                    
+                                    setFormData({
+                                      ...formData,
+                                      package_item_ids: newIds,
+                                      category_selections: updatedSelections
+                                    });
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Info message when dishes are selected */}
+                          {selectedDishesInCategory.length > 0 && (
+                            <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                              <p className="text-xs text-blue-700">
+                                {selectedDishesInCategory.length} dish{selectedDishesInCategory.length === 1 ? '' : 'es'} selected. 
+                                Users will be able to choose {existingSelection?.num_dishes_to_select === null 
+                                  ? 'all of them' 
+                                  : `${existingSelection?.num_dishes_to_select} dish${existingSelection?.num_dishes_to_select === 1 ? '' : 'es'}`} from this category.
+                              </p>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {categoryGroup.items.map((item) => (
-                            <PackageItemCard
-                              key={item.id}
-                              item={item}
-                              isSelected={formData.package_item_ids?.includes(item.id) || false}
-                              onToggle={() => handleItemToggle(item.id)}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                      );
+                    })}
+                    {getFilteredDishesByCategory().length === 0 && searchQuery.trim() && (
+                      <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
+                        <p className="text-gray-500">No dishes found matching "{searchQuery}"</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -818,12 +906,10 @@ export default function EditPackagePage() {
                   <div className="pl-12 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-700">
                     <span className="text-sm text-gray-500">Starting </span>
                     <span className="text-lg font-semibold">
-                      {packageData?.total_price 
-                        ? `AED ${Number(packageData.total_price).toFixed(2)}`
-                        : 'Calculating...'}
+                      AED {calculatePackagePrice().toFixed(2)}
                     </span>
                     <p className="text-xs text-gray-500 mt-1">
-                      Price is automatically calculated from selected dishes × minimum people × quantity
+                      Price is automatically calculated from selected dishes × {formData.minimum_people || minimumGuests || 'minimum'} people × quantity
                     </p>
                   </div>
                 </div>
@@ -853,13 +939,11 @@ export default function EditPackagePage() {
             <div>
               <span className="text-sm text-gray-600">Starting Price: </span>
               <span className="text-2xl font-bold text-gray-900 ml-2">
-                {packageData?.total_price 
-                  ? `AED ${Number(packageData.total_price).toFixed(2)}`
-                  : 'Calculating...'}
+                AED {calculatePackagePrice().toFixed(2)}
               </span>
               {formData.package_item_ids && formData.package_item_ids.length > 0 && (formData.minimum_people || minimumGuests) && (formData.minimum_people || minimumGuests || 0) > 0 && (
                 <p className="text-xs text-gray-500 mt-1">
-                  Price will be recalculated from selected items for {formData.minimum_people || minimumGuests} people
+                  Price will be calculated from selected items for {formData.minimum_people || minimumGuests} people
                 </p>
               )}
             </div>

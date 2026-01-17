@@ -183,7 +183,7 @@ export default function PackagesPage() {
     <>
       <Header
         onAddClick={catererStatus === 'PENDING' ? undefined : () => router.push('/caterer/packages/create')}
-        addButtonText={catererStatus === 'PENDING' ? 'Awaiting Approval' : '+ Create a Package'}
+        addButtonText={catererStatus === 'PENDING' ? 'Awaiting Approval' : '+ Create Menu'}
         showAddButton={true}
       />
       <main className="flex-1 p-4 lg:p-6 pt-20 lg:pt-24 bg-gray-50 min-h-screen">
@@ -229,13 +229,13 @@ export default function PackagesPage() {
               {catererStatus === 'PENDING' ? (
                 <div className="inline-block">
                   <Button disabled variant="outline" className="opacity-50 cursor-not-allowed">
-                    + Create a Package (Awaiting Approval)
+                    + Create Menu (Awaiting Approval)
                   </Button>
                   <p className="text-xs text-yellow-600 mt-2">Your profile must be approved before creating packages</p>
                 </div>
               ) : (
                 <Button onClick={() => router.push('/caterer/packages/create')} variant="primary">
-                  + Create a Package
+                  + Create Menu
                 </Button>
               )}
             </div>

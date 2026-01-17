@@ -187,30 +187,101 @@ export default function CatererDetailPage() {
       return;
     }
 
-    if (!user) {
-      showToast('error', 'Please log in to create a package');
-      router.push('/login');
+    // Validate guest count (required for build your own)
+    if (!guestCount || guestCount <= 0) {
+      showToast('error', 'Please enter number of guests');
       return;
+    }
+
+    // For non-authenticated users adding to cart, event details are required
+    if (!user) {
+      if (!eventType || !location || !eventDate) {
+        showToast('error', 'Please fill in all event details (event type, location, and date)');
+        return;
+      }
     }
 
     setCreatingPackage(true);
     try {
-      const res = await userApi.createCustomPackage({
-        dish_ids: Array.from(selectedDishes),
-        people_count: guestCount,
-      });
+      const selectedDishIds = Array.from(selectedDishes);
+      const selectedDishObjects = dishes.filter((d) => selectedDishIds.includes(d.id));
+      const totalPrice = buildOwnTotal;
+      const currency = selectedDishObjects[0]?.currency || 'AED';
 
-      if (res.error) {
-        showToast('error', res.error);
-        return;
-      }
+      if (!user) {
+        // Store in localStorage and add to cart for non-authenticated users
+        const { customPackageStorage } = await import('@/lib/utils/customPackageStorage');
+        const { cartStorage } = await import('@/lib/utils/cartStorage');
+        
+        // Store custom package
+        const catererBusinessName = caterer?.business_name || caterer?.name || 'Caterer';
+        const customPkg = customPackageStorage.addPackage({
+          caterer_id: catererId || '',
+          caterer_name: catererBusinessName,
+          dish_ids: selectedDishIds,
+          people_count: guestCount,
+          dishes: selectedDishObjects.map((d) => ({
+            id: d.id,
+            name: d.name,
+            price: d.price,
+            currency: d.currency,
+            image_url: d.image_url,
+            category: d.category,
+          })),
+          total_price: totalPrice,
+          currency,
+        });
 
-      if (res.data?.data?.id) {
-        showToast('success', 'Package created successfully!');
-        const packageId = res.data.data.id;
+        // Format date
+        const dateObj = new Date(eventDate);
+        dateObj.setHours(18, 0, 0, 0);
+
+        // Add to cart as a custom package
+        cartStorage.addItem({
+          package_id: customPkg.id, // Use custom package ID
+          package: {
+            id: customPkg.id,
+            name: `Custom Package - ${catererBusinessName}`,
+            people_count: guestCount,
+            total_price: totalPrice,
+            price_per_person: totalPrice / guestCount,
+            currency,
+            cover_image_url: selectedDishObjects[0]?.image_url || null,
+            caterer: {
+              id: catererId || '',
+              business_name: caterer?.business_name || null,
+              name: caterer?.name,
+            },
+          },
+          location,
+          guests: guestCount,
+          date: dateObj.toISOString(),
+          price_at_time: totalPrice,
+        });
+
+        showToast('success', 'Custom package added to cart!');
         setTimeout(() => {
-          router.push(`/mypackages/${packageId}`);
+          router.push('/cart');
         }, 1000);
+      } else {
+        // Create package on server for authenticated users
+        const res = await userApi.createCustomPackage({
+          dish_ids: selectedDishIds,
+          people_count: guestCount,
+        });
+
+        if (res.error) {
+          showToast('error', res.error);
+          return;
+        }
+
+        if (res.data?.data?.id) {
+          showToast('success', 'Package created successfully!');
+          const packageId = res.data.data.id;
+          setTimeout(() => {
+            router.push(`/mypackages/${packageId}`);
+          }, 1000);
+        }
       }
     } catch (err) {
       showToast('error', 'Failed to create package');
@@ -403,8 +474,8 @@ export default function CatererDetailPage() {
         {/* Tabs */}
         <div className="bg-white rounded-xl border border-gray-200 p-1 mb-6">
           <div className="flex gap-1">
-            {[
-              { id: 'packages', label: 'View Packages' },
+            {[ 
+              { id: 'packages', label: 'Set Menu' },
               { id: 'buildOwn', label: 'Build Your Own' },
               { id: 'requestQuote', label: 'Request Quote' },
             ].map((tab) => (
@@ -445,6 +516,7 @@ export default function CatererDetailPage() {
                         isSelected={selectedPackage?.id === pkg.id}
                         onSelect={() => setSelectedPackage(pkg)}
                         guestCount={guestCount}
+                        catererId={catererId}
                       />
                     ))}
                   </div>
@@ -551,17 +623,90 @@ export default function CatererDetailPage() {
                   Package Summary
                 </h3>
 
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Number of Guests
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={guestCount}
-                    onChange={(e) => setGuestCount(Number(e.target.value))}
-                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
+                {/* Event Details for Build Your Own */}
+                <div className="mb-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Event Type
+                    </label>
+                    <select
+                      value={eventType}
+                      onChange={(e) => setEventType(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      <option value="">Select event type</option>
+                      {occasions.map((occasion) => (
+                        <option key={occasion.id} value={occasion.id}>
+                          {occasion.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Location
+                    </label>
+                    <select
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      <option value="">Select location</option>
+                      <option value="Downtown Dubai">Downtown Dubai</option>
+                      <option value="Dubai Marina">Dubai Marina</option>
+                      <option value="Jumeirah">Jumeirah</option>
+                      <option value="Palm Jumeirah">Palm Jumeirah</option>
+                      <option value="Business Bay">Business Bay</option>
+                      <option value="Dubai International Financial Centre (DIFC)">Dubai International Financial Centre (DIFC)</option>
+                      <option value="Dubai Mall Area">Dubai Mall Area</option>
+                      <option value="Burj Al Arab Area">Burj Al Arab Area</option>
+                      <option value="Dubai Festival City">Dubai Festival City</option>
+                      <option value="Dubai Sports City">Dubai Sports City</option>
+                      <option value="Dubai Media City">Dubai Media City</option>
+                      <option value="Dubai Internet City">Dubai Internet City</option>
+                      <option value="Dubai Knowledge Park">Dubai Knowledge Park</option>
+                      <option value="Dubai Healthcare City">Dubai Healthcare City</option>
+                      <option value="Dubai World Trade Centre">Dubai World Trade Centre</option>
+                      <option value="Dubai Creek">Dubai Creek</option>
+                      <option value="Deira">Deira</option>
+                      <option value="Bur Dubai">Bur Dubai</option>
+                      <option value="Al Barsha">Al Barsha</option>
+                      <option value="Jumeirah Beach Residence (JBR)">Jumeirah Beach Residence (JBR)</option>
+                      <option value="Dubai Hills">Dubai Hills</option>
+                      <option value="Arabian Ranches">Arabian Ranches</option>
+                      <option value="Emirates Hills">Emirates Hills</option>
+                      <option value="Dubai Silicon Oasis">Dubai Silicon Oasis</option>
+                      <option value="Dubai Production City">Dubai Production City</option>
+                      <option value="Dubai Studio City">Dubai Studio City</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Event Date
+                    </label>
+                    <input
+                      type="date"
+                      value={eventDate}
+                      onChange={(e) => setEventDate(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Number of Guests
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={guestCount}
+                      onChange={(e) => setGuestCount(Number(e.target.value))}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
                 </div>
 
                 {selectedDishes.size > 0 && (

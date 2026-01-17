@@ -297,14 +297,7 @@ export default function CartPage() {
                       : 'bg-green-600 text-white hover:bg-green-700'
                   }`}
                 >
-                  {!user ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Lock className="w-4 h-4" />
-                      Log In to Checkout
-                    </span>
-                  ) : (
-                    'Proceed to Checkout'
-                  )}
+                  Proceed to Checkout
                 </button>
 
                 <Link

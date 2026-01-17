@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
@@ -49,6 +49,12 @@ export function BusinessProfile({ data, updateData, onNext }: BusinessProfilePro
   const [cuisineTypes, setCuisineTypes] = useState<CuisineType[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [foodLicenseFile, setFoodLicenseFile] = useState<File | null>(null);
+  const [registrationFile, setRegistrationFile] = useState<File | null>(null);
+  const [foodLicensePreview, setFoodLicensePreview] = useState<string | null>(data.food_license || null);
+  const [registrationPreview, setRegistrationPreview] = useState<string | null>(data.Registration || null);
+  const foodLicenseInputRef = useRef<HTMLInputElement>(null);
+  const registrationInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Fetch cuisine types from API
@@ -109,6 +115,78 @@ export function BusinessProfile({ data, updateData, onNext }: BusinessProfilePro
       updateData({ certifications: current.filter((c: string) => c !== cert) });
     } else {
       updateData({ certifications: [...current, cert] });
+    }
+  };
+
+  const handleFoodLicenseChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setFoodLicenseFile(file);
+    
+    // Upload file to backend
+    try {
+      const token = localStorage.getItem('auth_token');
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('field', 'food_license');
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/caterer/onboarding/upload-document`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          setFoodLicensePreview(result.data.url);
+          updateData({ food_license: result.data.url });
+        }
+      } else {
+        setErrors({ ...errors, food_license: 'Failed to upload food license' });
+      }
+    } catch (error) {
+      console.error('Error uploading food license:', error);
+      setErrors({ ...errors, food_license: 'Failed to upload food license' });
+    }
+  };
+
+  const handleRegistrationChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setRegistrationFile(file);
+    
+    // Upload file to backend
+    try {
+      const token = localStorage.getItem('auth_token');
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('field', 'Registration');
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/caterer/onboarding/upload-document`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          setRegistrationPreview(result.data.url);
+          updateData({ Registration: result.data.url });
+        }
+      } else {
+        setErrors({ ...errors, Registration: 'Failed to upload registration' });
+      }
+    } catch (error) {
+      console.error('Error uploading registration:', error);
+      setErrors({ ...errors, Registration: 'Failed to upload registration' });
     }
   };
 
@@ -287,6 +365,84 @@ export function BusinessProfile({ data, updateData, onNext }: BusinessProfilePro
             );
           })}
         </div>
+      </div>
+
+      {/* Food License Upload */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Food License
+        </label>
+        <div className="flex items-center gap-4">
+          <input
+            ref={foodLicenseInputRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            onChange={handleFoodLicenseChange}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => foodLicenseInputRef.current?.click()}
+            className="px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            {foodLicensePreview ? 'Change File' : 'Upload Food License'}
+          </button>
+          {foodLicensePreview && (
+            <div className="flex items-center gap-2">
+              <a
+                href={foodLicensePreview}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-green-600 hover:underline"
+              >
+                View Uploaded File
+              </a>
+            </div>
+          )}
+        </div>
+        {errors.food_license && (
+          <p className="mt-1 text-sm text-red-600">{errors.food_license}</p>
+        )}
+        <p className="mt-1 text-xs text-gray-500">Upload your food license document (PDF, JPG, PNG)</p>
+      </div>
+
+      {/* Registration Upload */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Registration
+        </label>
+        <div className="flex items-center gap-4">
+          <input
+            ref={registrationInputRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            onChange={handleRegistrationChange}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => registrationInputRef.current?.click()}
+            className="px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            {registrationPreview ? 'Change File' : 'Upload Registration'}
+          </button>
+          {registrationPreview && (
+            <div className="flex items-center gap-2">
+              <a
+                href={registrationPreview}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-green-600 hover:underline"
+              >
+                View Uploaded File
+              </a>
+            </div>
+          )}
+        </div>
+        {errors.Registration && (
+          <p className="mt-1 text-sm text-red-600">{errors.Registration}</p>
+        )}
+        <p className="mt-1 text-xs text-gray-500">Upload your registration document (PDF, JPG, PNG)</p>
       </div>
 
       <div className="flex justify-end pt-4">

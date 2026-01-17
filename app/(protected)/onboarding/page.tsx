@@ -23,6 +23,8 @@ interface OnboardingData {
   maximum_guests: number;
   cuisine_types: string[];
   certifications: string[];
+  food_license?: string;
+  Registration?: string;
 
   // Step 2 - Menu Types
   delivery_only: boolean;
@@ -33,7 +35,6 @@ interface OnboardingData {
   preparation_time: number;
   staff: number;
   servers: number;
-  unavailable_dates: string[];
 }
 
 const STEPS = [
@@ -64,7 +65,6 @@ export default function CatererOnboardingPage() {
     preparation_time: 24,
     staff: 0,
     servers: 0,
-    unavailable_dates: [],
   });
 
   // Load existing draft data on mount and check if already submitted
@@ -109,13 +109,14 @@ export default function CatererOnboardingPage() {
               maximum_guests: draftData.maximum_guests || 500,
               cuisine_types: draftData.cuisine_types || [],
               certifications: draftData.certifications || [],
+              food_license: draftData.food_license || '',
+              Registration: draftData.Registration || '',
               delivery_only: draftData.delivery_only ?? true,
               delivery_plus_setup: draftData.delivery_plus_setup ?? true,
               full_service: draftData.full_service ?? false,
               preparation_time: draftData.preparation_time || 24,
               staff: draftData.staff || 0,
               servers: draftData.servers || 0,
-              unavailable_dates: draftData.unavailable_dates || [],
             });
           }
         }
