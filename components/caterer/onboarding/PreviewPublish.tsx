@@ -50,16 +50,31 @@ export function PreviewPublish({ data, onBack, onDraftSaved, onSubmitSuccess }: 
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) throw new Error('Failed to save draft');
+      if (!response.ok) {
+        // Try to parse the error response
+        let errorMessage = 'Failed to save draft. Please try again.';
+        try {
+          const errorData = await response.json();
+          if (errorData.error?.message) {
+            errorMessage = errorData.error.message;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch (parseError) {
+          // If parsing fails, use default message
+          console.error('Error parsing error response:', parseError);
+        }
+        throw new Error(errorMessage);
+      }
 
       setDraftSaveMessage('Draft saved successfully!');
       if (onDraftSaved) onDraftSaved();
       
       // Clear message after 3 seconds
       setTimeout(() => setDraftSaveMessage(''), 3000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving draft:', error);
-      setDraftSaveMessage('Failed to save draft. Please try again.');
+      setDraftSaveMessage(error.message || 'Failed to save draft. Please try again.');
     } finally {
       setIsSavingDraft(false);
     }
@@ -70,6 +85,17 @@ export function PreviewPublish({ data, onBack, onDraftSaved, onSubmitSuccess }: 
       setIsSubmitting(true);
       setSubmitMessage(null);
       const token = localStorage.getItem('auth_token');
+      
+      // Validate required fields before submission
+      if (!data.business_name || !data.region || (Array.isArray(data.region) && data.region.length === 0) || !data.minimum_guests || !data.maximum_guests) {
+        setSubmitMessage({
+          type: 'error',
+          text: 'Please complete all required fields: Business Name, Service Area, and Guest Capacity are required.'
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/caterer/onboarding/submit`, {
         method: 'POST',
         headers: {
@@ -79,12 +105,29 @@ export function PreviewPublish({ data, onBack, onDraftSaved, onSubmitSuccess }: 
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) throw new Error('Failed to submit');
+      if (!response.ok) {
+        // Try to parse the error response
+        let errorMessage = 'Failed to submit application. Please try again.';
+        try {
+          const errorData = await response.json();
+          if (errorData.error?.message) {
+            errorMessage = errorData.error.message;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch (parseError) {
+          // If parsing fails, use default message
+          console.error('Error parsing error response:', parseError);
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
 
       // Show success message
       setSubmitMessage({
         type: 'success',
-        text: 'Application submitted successfully! Our team will review your profile and get back to you within 2-3 business days.'
+        text: result.message || 'Application submitted successfully! Our team will review your profile and get back to you within 2-3 business days.'
       });
       
       // Refresh user data to update their type to CATERER
@@ -97,11 +140,11 @@ export function PreviewPublish({ data, onBack, onDraftSaved, onSubmitSuccess }: 
       
       // Redirect to caterer dashboard
       router.push('/caterer/dashboard');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting:', error);
       setSubmitMessage({
         type: 'error',
-        text: 'Failed to submit application. Please try again.'
+        text: error.message || 'Failed to submit application. Please try again.'
       });
     } finally {
       setIsSubmitting(false);

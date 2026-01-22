@@ -8,15 +8,13 @@ import {
   Calendar, 
   MapPin, 
   Users, 
-  CreditCard, 
-  Lock, 
   CheckCircle2, 
   Clock,
   ChevronRight,
-  Building,
   FileText,
   Minus,
-  Plus
+  Plus,
+  Truck
 } from 'lucide-react';
 import { Toast, useToast } from '@/components/ui/Toast';
 import { UAE_EMIRATES, getMinEventDate } from '@/lib/constants';
@@ -114,11 +112,8 @@ export default function CheckoutPage() {
   const [area, setArea] = useState('');
   const [specialInstructions, setSpecialInstructions] = useState('');
 
-  // Payment form
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvc, setCardCvc] = useState('');
-  const [cardName, setCardName] = useState('');
+  // Payment method
+  const [paymentMethod, setPaymentMethod] = useState<'pay_on_delivery'>('pay_on_delivery');
 
   const minDate = getMinEventDate();
 
@@ -295,7 +290,7 @@ export default function CheckoutPage() {
 
   // Validation
   const isEventDetailsValid = eventDate && eventTime && eventType && guestCount > 0 && streetAddress && area;
-  const isPaymentValid = cardNumber.length >= 16 && cardExpiry.length >= 5 && cardCvc.length >= 3 && cardName.length > 0;
+  const isPaymentValid = paymentMethod === 'pay_on_delivery';
 
   const handleContinueToReview = () => {
     if (!isEventDetailsValid) {
@@ -316,7 +311,7 @@ export default function CheckoutPage() {
     }
 
     if (!isPaymentValid) {
-      showToast('error', 'Please fill in all payment details');
+      showToast('error', 'Please select a payment method');
       return;
     }
 
@@ -354,26 +349,6 @@ export default function CheckoutPage() {
     }
   };
 
-  // Format card number with spaces
-  const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    const matches = v.match(/\d{4,16}/g);
-    const match = (matches && matches[0]) || '';
-    const parts = [];
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-    return parts.length ? parts.join(' ') : value;
-  };
-
-  // Format expiry date
-  const formatExpiry = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    if (v.length >= 2) {
-      return v.substring(0, 2) + '/' + v.substring(2, 4);
-    }
-    return v;
-  };
 
   if (loading || syncingCart || authLoading) {
     return (
@@ -799,75 +774,52 @@ export default function CheckoutPage() {
             {/* Step 3: Payment */}
             {currentStep === 'payment' && (
               <>
-                {/* Payment Card */}
+                {/* Payment Method Card */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
                   <div className="flex items-center gap-3 mb-6">
-                    <CreditCard className="w-5 h-5 text-green-600" />
-                    <h2 className="font-semibold text-lg text-gray-900">Payment Details</h2>
+                    <Truck className="w-5 h-5 text-green-600" />
+                    <h2 className="font-semibold text-lg text-gray-900">Payment Method</h2>
                   </div>
 
-                  {/* Card Number */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Card Number
-                    </label>
-                    <input
-                      type="text"
-                      value={cardNumber}
-                      onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                      placeholder="1234 5678 9012 3456"
-                      maxLength={19}
-                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
-
-                  {/* Expiry and CVC */}
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Expiry Date
-                      </label>
+                  {/* Pay on Delivery Option */}
+                  <div className="space-y-4">
+                    <label
+                      className={`flex items-start gap-4 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                        paymentMethod === 'pay_on_delivery'
+                          ? 'border-green-600 bg-green-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
                       <input
-                        type="text"
-                        value={cardExpiry}
-                        onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
-                        placeholder="MM/YY"
-                        maxLength={5}
-                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        type="radio"
+                        name="paymentMethod"
+                        value="pay_on_delivery"
+                        checked={paymentMethod === 'pay_on_delivery'}
+                        onChange={(e) => setPaymentMethod(e.target.value as 'pay_on_delivery')}
+                        className="mt-1 w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
                       />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        CVC
-                      </label>
-                      <input
-                        type="text"
-                        value={cardCvc}
-                        onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                        placeholder="123"
-                        maxLength={4}
-                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Cardholder Name */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cardholder Name
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Truck className="w-5 h-5 text-green-600" />
+                          <span className="font-semibold text-gray-900">Pay on Delivery</span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Pay with cash or card when your order is delivered
+                        </p>
+                      </div>
                     </label>
-                    <input
-                      type="text"
-                      value={cardName}
-                      onChange={(e) => setCardName(e.target.value)}
-                      placeholder="John Doe"
-                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
                   </div>
 
-                  <div className="flex items-center gap-2 mt-4 text-xs text-gray-500">
-                    <Lock className="w-3 h-3" />
-                    <span>Your payment information is secure and encrypted</span>
+                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+                      <div className="text-sm text-blue-800">
+                        <p className="font-medium mb-1">Payment Information</p>
+                        <p className="text-blue-700">
+                          You will pay the total amount of <span className="font-semibold">AED {total.toLocaleString()}</span> when your order is delivered to the specified address.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -895,8 +847,8 @@ export default function CheckoutPage() {
                       </>
                     ) : (
                       <>
-                        <Lock className="w-4 h-4" />
-                        <span>Pay AED {total.toLocaleString()}</span>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Place Order (Pay on Delivery)</span>
                       </>
                     )}
                   </button>
