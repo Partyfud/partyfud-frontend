@@ -285,9 +285,7 @@ export default function CheckoutPage() {
     return cartItems.reduce((sum, item) => sum + calculateItemPrice(item), 0);
   }, [cartItems, guestCount]);
 
-  const deliveryFee = 150; // Fixed delivery fee
-  const serviceFee = Math.round(subtotal * 0.05); // 5% service fee
-  const total = subtotal + deliveryFee + serviceFee;
+  const total = subtotal;
 
   // Validation
   const isEventDetailsValid = eventDate && eventTime && eventType && guestCount > 0 && streetAddress && area;
@@ -913,14 +911,6 @@ export default function CheckoutPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal</span>
                   <span className="font-medium">AED {subtotal.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Delivery</span>
-                  <span className="font-medium">AED {deliveryFee.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Service Fee (5%)</span>
-                  <span className="font-medium">AED {serviceFee.toLocaleString()}</span>
                 </div>
               </div>
 
