@@ -7,18 +7,18 @@ import { useRouter } from 'next/navigation';
 import { userApi, Package as ApiPackage } from '@/lib/api/user.api';
 import { UAE_EMIRATES } from '@/lib/constants';
 
-interface Package {
+interface PackageViewModel {
     id: string;
     title: string;
     caterer: string;
-    catererId: string;
+    catererId: string | undefined;
     price: number;
     rating?: number;
     image: string;
     customizable?: boolean;
     discount?: string;
     eventType: string;
-    occasionIds?: string[]; // Add occasion IDs for filtering
+    occasionIds?: string[];
     minimumPeople: number;
 }
 
@@ -42,8 +42,8 @@ export default function PackagesPage() {
     const [dishName, setDishName] = useState<string>('');
 
     // Data states
-    const [allPackages, setAllPackages] = useState<Package[]>([]); // Store all packages from API
-    const [packages, setPackages] = useState<Package[]>([]); // Filtered packages to display
+    const [allPackages, setAllPackages] = useState<PackageViewModel[]>([]); // Store all packages from API
+    const [packages, setPackages] = useState<PackageViewModel[]>([]); // Filtered packages to display
     const [apiPackagesData, setApiPackagesData] = useState<ApiPackage[]>([]); // Store raw API data for people_count access
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -138,7 +138,7 @@ export default function PackagesPage() {
             try {
                 const response = await userApi.getOccasions();
                 if (response.data?.data) {
-                    setOccasions(response.data.data.map((occ: any) => ({
+                    setOccasions(response.data.data.map(occ => ({
                         id: occ.id,
                         name: occ.name,
                     })));
@@ -152,7 +152,7 @@ export default function PackagesPage() {
 
     // Build filters object for API
     const buildFilters = () => {
-        const filters: any = {};
+        const filters: Parameters<typeof userApi.getAllPackages>[0] = {};
 
         if (search) {
             filters.search = search;
@@ -200,21 +200,21 @@ export default function PackagesPage() {
                     setApiPackagesData(response.data.data);
 
                     // Map API response to component structure
-                    const mappedPackages: Package[] = response.data.data
-                        .filter((pkg: ApiPackage) => (pkg as any).caterer?.id) // Only include packages with valid caterer ID
+                    const mappedPackages: PackageViewModel[] = response.data.data
+                        .filter((pkg: ApiPackage) => pkg.caterer?.id) // Only include packages with valid caterer ID
                         .map((pkg: ApiPackage) => ({
                             id: pkg.id,
                             title: pkg.name,
-                            caterer: (pkg as any).caterer?.name || 'Unknown Caterer',
-                            catererId: (pkg as any).caterer?.id, // Get caterer ID for navigation
+                            caterer: pkg.caterer?.name || 'Unknown Caterer',
+                            catererId: pkg.caterer?.id,
                             price: Number(pkg.total_price),
                             rating: pkg.rating || undefined,
                             image: pkg.cover_image_url || '/logo2.svg',
                             customizable: pkg.customisation_type === 'CUSTOMISABLE' || pkg.customisation_type === 'CUSTOMIZABLE',
                             discount: undefined, // Can be added if discount logic exists
                             eventType: pkg.occasions?.[0]?.occasion?.name || 'All',
-                            occasionIds: pkg.occasions?.map((occ: any) => occ.occasion?.id).filter(Boolean) || [], // Store all occasion IDs
-                            minimumPeople: pkg.minimum_people || (pkg as any).people_count || 1,
+                            occasionIds: pkg.occasions?.map(occ => occ.occasion.id).filter(Boolean) || [],
+                            minimumPeople: pkg.minimum_people || pkg.people_count || 1,
                         }));
                     setAllPackages(mappedPackages); // Store all packages
                     // Don't setPackages here directly, let the filtering useEffect handle it
@@ -244,7 +244,7 @@ export default function PackagesPage() {
         // Occasions
         if (selectedOccasions.length > 0) {
             filtered = filtered.filter(pkg => {
-                const pkgOccasionIds = (pkg as any).occasionIds || [];
+                const pkgOccasionIds = pkg.occasionIds || [];
                 return selectedOccasions.some(selectedId => pkgOccasionIds.includes(selectedId));
             });
         }
@@ -594,7 +594,7 @@ export default function PackagesPage() {
                         />
                         <select
                             value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value as any)}
+                            onChange={(e) => setSortBy(e.target.value as 'created_desc' | 'price_asc' | 'price_desc' | 'rating_desc')}
                             className="bg-white border border-gray-200 rounded-lg px-3 py-2"
                         >
                             <option value="created_desc">Newest First</option>

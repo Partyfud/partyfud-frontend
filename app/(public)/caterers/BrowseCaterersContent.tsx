@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { userApi, type Caterer, type Occasion } from '@/lib/api/user.api';
+import { userApi, type Caterer, type Occasion, type FilterCaterersParams } from '@/lib/api/user.api';
 import { Calendar, X, Filter, ChevronDown, Check } from 'lucide-react';
 
 export default function BrowseCaterersContent() {
@@ -13,8 +13,8 @@ export default function BrowseCaterersContent() {
 
     // Dropdown Data States
     const [occasions, setOccasions] = useState<Occasion[]>([]);
-    const [menuTypeOptions, setMenuTypeOptions] = useState<any[]>([]);
-    const [dietaryOptions, setDietaryOptions] = useState<any[]>([]);
+    const [menuTypeOptions, setMenuTypeOptions] = useState<Array<{ id: string; name: string }>>([]);
+    const [dietaryOptions, setDietaryOptions] = useState<Array<{ id: string; name: string }>>([]);
 
     // Filter States
     const [selectedEventType, setSelectedEventType] = useState('All events');
@@ -140,7 +140,7 @@ export default function BrowseCaterersContent() {
             const bMax = budgetMax && budgetMax.trim() !== '' ? parseInt(budgetMax) : undefined;
 
             // Build filter params for API
-            const filterParams: any = {
+            const filterParams: FilterCaterersParams = {
                 search: search || undefined,
                 minGuests: gMin !== undefined && !isNaN(gMin) ? gMin : undefined,
                 maxGuests: gMax !== undefined && !isNaN(gMax) ? gMax : undefined,
@@ -153,7 +153,7 @@ export default function BrowseCaterersContent() {
             };
 
             // Remove undefined values
-            Object.keys(filterParams).forEach(key => {
+            (Object.keys(filterParams) as Array<keyof FilterCaterersParams>).forEach(key => {
                 if (filterParams[key] === undefined) {
                     delete filterParams[key];
                 }
@@ -422,7 +422,8 @@ export default function BrowseCaterersContent() {
                                 ) : (
                                     filteredCaterers.map((c) => {
                                         const initials = getInitials(c.name);
-                                        const rating = c.packages && c.packages.length > 0 && c.packages[0]?.rating
+                                        // c.packages is now Package[], so we can access properties safely
+                                        const rating = c.packages?.[0]?.rating
                                             ? typeof c.packages[0].rating === 'number'
                                                 ? c.packages[0].rating.toFixed(1)
                                                 : parseFloat(String(c.packages[0].rating)).toFixed(1)

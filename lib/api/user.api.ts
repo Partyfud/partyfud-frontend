@@ -41,7 +41,7 @@ export interface Caterer {
   delivery_plus_setup: boolean;
   full_service: boolean;
   gallery_images?: string[];
-  packages: any[];
+  packages: Package[];
   packages_count: number;
 }
 
@@ -64,7 +64,14 @@ export interface Package {
   additional_info?: string;
   items: any[];
   category_selections: any[];
-  occasions: any[];
+  occasions: Array<{
+    id: string;
+    occasion: {
+      id: string;
+      name: string;
+      image_url?: string | null;
+    };
+  }>;
   add_ons?: Array<{
     id: string;
     name: string;

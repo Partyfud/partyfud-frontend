@@ -18,6 +18,8 @@ export default function TopPackages({ occasionId, occasionName }: TopPackagesPro
 
   useEffect(() => {
     const fetchPackages = async () => {
+      if (!occasionId) return;
+
       try {
         setLoading(true);
         // Fetch packages filtered by occasion_id
@@ -37,9 +39,7 @@ export default function TopPackages({ occasionId, occasionName }: TopPackagesPro
       }
     };
 
-    if (occasionId) {
-      fetchPackages();
-    }
+    fetchPackages();
   }, [occasionId]);
 
   const handleViewAll = () => {
@@ -89,11 +89,13 @@ export default function TopPackages({ occasionId, occasionName }: TopPackagesPro
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {packages.map((pkg) => {
-              const catererId = (pkg as any).caterer?.id;
-              const catererName = (pkg as any).caterer?.name || 'Unknown Caterer';
+              const catererId = pkg.caterer?.id;
+              const catererName = pkg.caterer?.name || 'Unknown Caterer';
               const packageImage = pkg.cover_image_url || '/user/package1.svg';
               const rating = pkg.rating;
               const isCustomizable = pkg.customisation_type === 'CUSTOMISABLE' || pkg.customisation_type === 'CUSTOMIZABLE';
+              // Fallback to people_count if minimum_people is missing/zero, though type definition says minimum_people is number.
+              const minPeople = pkg.minimum_people || pkg.people_count || 1;
 
               return (
                 <Link
@@ -115,7 +117,7 @@ export default function TopPackages({ occasionId, occasionName }: TopPackagesPro
                     />
 
                     {/* Rating Badge */}
-                    {rating && (
+                    {rating !== undefined && (
                       <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-1">
                         <span>⭐</span>
                         <span>{typeof rating === 'number' ? rating.toFixed(1) : parseFloat(String(rating)).toFixed(1)}</span>
@@ -149,7 +151,7 @@ export default function TopPackages({ occasionId, occasionName }: TopPackagesPro
                         </p>
                         {!pkg.is_custom_price && (
                           <p className="text-gray-500 text-xs mt-1">
-                            For minimum {(pkg as any).minimum_people || (pkg as any).people_count || 1} people
+                            For minimum {minPeople} people
                           </p>
                         )}
                       </div>
