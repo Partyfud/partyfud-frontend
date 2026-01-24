@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { userApi, Package as ApiPackage } from '@/lib/api/user.api';
 import { UAE_EMIRATES } from '@/lib/constants';
 
@@ -18,6 +19,7 @@ interface Package {
     discount?: string;
     eventType: string;
     occasionIds?: string[]; // Add occasion IDs for filtering
+    minimumPeople: number;
 }
 
 export default function PackagesPage() {
@@ -27,7 +29,7 @@ export default function PackagesPage() {
     const [minGuests, setMinGuests] = useState<number | ''>('');
     const [maxGuests, setMaxGuests] = useState<number | ''>('');
     const [minPrice, setMinPrice] = useState<number | ''>('');
-    const [maxPrice, setMaxPrice] = useState<number>(10000);
+    const [maxPrice, setMaxPrice] = useState<number>(50000); // Default to max range
     const [menuType, setMenuType] = useState<'fixed' | 'customizable' | ''>('');
     const [sortBy, setSortBy] = useState<'price_asc' | 'price_desc' | 'rating_desc' | 'created_desc'>('created_desc');
     const [occasionId, setOccasionId] = useState<string>('');
@@ -46,6 +48,7 @@ export default function PackagesPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [occasions, setOccasions] = useState<Array<{ id: string; name: string }>>([]);
+    const router = useRouter();
 
     // Read occasion_id, occasion_name, and cuisine_type_id from URL on mount
     useEffect(() => {
@@ -73,7 +76,9 @@ export default function PackagesPage() {
             }
 
             if (occasionIdParam) {
-                setOccasionId(decodeURIComponent(occasionIdParam));
+                const decodedId = decodeURIComponent(occasionIdParam);
+                setOccasionId(decodedId);
+                setSelectedOccasions([decodedId]); // Sync URL occasion to checkboxes
                 // Fetch occasion name for display
                 const fetchOccasionName = async () => {
                     try {
@@ -96,7 +101,9 @@ export default function PackagesPage() {
             if (occasionNameParamValue) {
                 const decodedName = decodeURIComponent(occasionNameParamValue);
                 setOccasionNameParam(decodedName);
-                setOccasionName(decodedName);
+                if (!occasionIdParam) {
+                    setOccasionName(decodedName);
+                }
             }
 
             if (cuisineTypeIdParam) {
@@ -155,34 +162,13 @@ export default function PackagesPage() {
             filters.location = location;
         }
 
-        if (minGuests !== '') {
-            filters.min_guests = Number(minGuests);
-        }
-
-        if (maxGuests !== '') {
-            filters.max_guests = Number(maxGuests);
-        }
-
-        if (minPrice !== '') {
-            filters.min_price = Number(minPrice);
-        }
-
-        if (maxPrice !== 10000) {
-            filters.max_price = Number(maxPrice);
-        }
+        // Removed min_guests, max_guests, min_price, max_price from API filters to rely on client-side filtering
 
         if (menuType) {
             filters.menu_type = menuType;
         }
 
-        if (occasionId) {
-            filters.occasion_id = occasionId;
-        }
-
-        // Support filtering by occasion_name (backend will convert to occasion_id)
-        if (occasionNameParam && !occasionId) {
-            filters.occasion_name = occasionNameParam;
-        }
+        // Removed occasion_id and occasion_name from API filters to rely on client-side filtering via selectedOccasions
 
         if (cuisineTypeId) {
             filters.cuisine_type_id = cuisineTypeId;
@@ -221,16 +207,17 @@ export default function PackagesPage() {
                             title: pkg.name,
                             caterer: (pkg as any).caterer?.name || 'Unknown Caterer',
                             catererId: (pkg as any).caterer?.id, // Get caterer ID for navigation
-                            price: pkg.total_price,
+                            price: Number(pkg.total_price),
                             rating: pkg.rating || undefined,
                             image: pkg.cover_image_url || '/logo2.svg',
                             customizable: pkg.customisation_type === 'CUSTOMISABLE' || pkg.customisation_type === 'CUSTOMIZABLE',
                             discount: undefined, // Can be added if discount logic exists
                             eventType: pkg.occasions?.[0]?.occasion?.name || 'All',
                             occasionIds: pkg.occasions?.map((occ: any) => occ.occasion?.id).filter(Boolean) || [], // Store all occasion IDs
+                            minimumPeople: pkg.minimum_people || (pkg as any).people_count || 1,
                         }));
                     setAllPackages(mappedPackages); // Store all packages
-                    setPackages(mappedPackages); // Initially show all
+                    // Don't setPackages here directly, let the filtering useEffect handle it
                 }
             } catch (err: any) {
                 console.error('Error fetching packages:', err);
@@ -248,22 +235,38 @@ export default function PackagesPage() {
 
         return () => clearTimeout(timeoutId);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search, location, minGuests, maxGuests, minPrice, maxPrice, menuType, sortBy, occasionId, occasionNameParam, cuisineTypeId, dishId]); // Removed selectedOccasions
+    }, [search, location, menuType, sortBy, occasionId, occasionNameParam, cuisineTypeId, dishId]); // Removed selectedOccasions, minGuests, maxGuests, minPrice, maxPrice
 
-    // Client-side filtering by selected occasions
+    // Client-side filtering
     useEffect(() => {
-        if (selectedOccasions.length === 0) {
-            // No occasion filter - show all packages
-            setPackages(allPackages);
-        } else {
-            // Filter packages that have at least one of the selected occasions
-            const filtered = allPackages.filter(pkg => {
+        let filtered = allPackages;
+
+        // Occasions
+        if (selectedOccasions.length > 0) {
+            filtered = filtered.filter(pkg => {
                 const pkgOccasionIds = (pkg as any).occasionIds || [];
                 return selectedOccasions.some(selectedId => pkgOccasionIds.includes(selectedId));
             });
-            setPackages(filtered);
         }
-    }, [selectedOccasions, allPackages]);
+
+        // Guests
+        if (minGuests !== '') {
+            filtered = filtered.filter(pkg => pkg.minimumPeople >= Number(minGuests));
+        }
+        if (maxGuests !== '') {
+            filtered = filtered.filter(pkg => pkg.minimumPeople <= Number(maxGuests));
+        }
+
+        // Price
+        if (minPrice !== '') {
+            filtered = filtered.filter(pkg => pkg.price >= Number(minPrice));
+        }
+        if (maxPrice !== 50000) { // Using 50000 as "unlimited" or max
+            filtered = filtered.filter(pkg => pkg.price <= Number(maxPrice));
+        }
+
+        setPackages(filtered);
+    }, [selectedOccasions, allPackages, minGuests, maxGuests, minPrice, maxPrice]);
 
     const handleClearFilters = () => {
         setSearch('');
@@ -271,7 +274,7 @@ export default function PackagesPage() {
         setMinGuests('');
         setMaxGuests('');
         setMinPrice('');
-        setMaxPrice(10000);
+        setMaxPrice(50000);
         setMenuType('');
         setSortBy('created_desc');
         setOccasionId('');
@@ -288,7 +291,25 @@ export default function PackagesPage() {
 
     return (
         <section className="bg-[#FAFAFA] min-h-screen">
-            <h1 className='mt-5 ml-36 text-3xl font-semibold'>Browse from Packages</h1>
+            <div className="flex items-center gap-4 mt-5 ml-36">
+                <button
+                    onClick={() => router.back()}
+                    className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+                    aria-label="Go back"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
+                        stroke="currentColor"
+                        className="w-6 h-6"
+                    >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                    </svg>
+                </button>
+                <h1 className='text-3xl font-semibold'>Browse from Packages</h1>
+            </div>
 
             {/* Occasion Filters */}
             {occasions.length > 0 && (
@@ -325,7 +346,22 @@ export default function PackagesPage() {
                                     {selectedOccasions.length} occasion{selectedOccasions.length !== 1 ? 's' : ''} selected
                                 </span>
                                 <button
-                                    onClick={() => setSelectedOccasions([])}
+                                    onClick={() => {
+                                        setSelectedOccasions([]);
+                                        // Also clear URL params if present
+                                        if (occasionId || occasionNameParam) {
+                                            setOccasionId('');
+                                            setOccasionName('');
+                                            setOccasionNameParam('');
+                                            const params = new URLSearchParams(window.location.search);
+                                            params.delete('occasion_id');
+                                            params.delete('occasion_name');
+                                            const newUrl = params.toString()
+                                                ? `/packages?${params.toString()}`
+                                                : '/packages';
+                                            window.history.replaceState({}, '', newUrl);
+                                        }
+                                    }}
                                     className="text-sm text-[#268700] hover:text-[#1f6b00] font-medium"
                                 >
                                     Clear Selection
@@ -350,17 +386,7 @@ export default function PackagesPage() {
                         </button>
                     </div>
 
-                    {/* Search */}
-                    <div className="mb-4">
-                        <label className="text-sm text-gray-500 mb-2 block">Search</label>
-                        <input
-                            type="text"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Search packages..."
-                            className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2"
-                        />
-                    </div>
+
 
                     {/* Location */}
                     <div className="mb-4">
@@ -478,9 +504,9 @@ export default function PackagesPage() {
                 {/* RIGHT CONTENT */}
                 <div>
                     {/* Active Filter Indicators */}
-                    {(occasionName || cuisineTypeName) && (
+                    {(occasionName && selectedOccasions.length === 1 && occasionId && selectedOccasions[0] === occasionId || cuisineTypeName || dishName) && (
                         <div className="mb-4 space-y-2">
-                            {occasionName && (
+                            {occasionName && selectedOccasions.length === 1 && occasionId && selectedOccasions[0] === occasionId && (
                                 <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <span className="text-sm text-green-700 font-medium">
@@ -492,6 +518,7 @@ export default function PackagesPage() {
                                             setOccasionId('');
                                             setOccasionName('');
                                             setOccasionNameParam('');
+                                            setSelectedOccasions([]);
                                             const params = new URLSearchParams(window.location.search);
                                             params.delete('occasion_id');
                                             params.delete('occasion_name');

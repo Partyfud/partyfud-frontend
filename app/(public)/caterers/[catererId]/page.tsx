@@ -65,10 +65,10 @@ export default function CatererDetailPage() {
   // Cart states
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartPackageIds, setCartPackageIds] = useState<Set<string>>(new Set());
-  
+
   // Add-ons selection state (only for FIXED packages) - simple checkbox selection
   const [selectedAddOns, setSelectedAddOns] = useState<Set<string>>(new Set()); // Set<addOnId>
-  
+
   // Reset selected add-ons when package changes
   useEffect(() => {
     setSelectedAddOns(new Set());
@@ -117,7 +117,7 @@ export default function CatererDetailPage() {
           const customizablePackages = packagesRes.data.data.filter(
             (pkg: Package) => pkg.customisation_type === 'CUSTOMISABLE' || pkg.customisation_type === 'CUSTOMIZABLE'
           );
-          
+
         }
 
         if (occasionsRes.data?.data) {
@@ -174,7 +174,7 @@ export default function CatererDetailPage() {
         // Remove packageId from URL to clean it up
         const newSearchParams = new URLSearchParams(searchParams.toString());
         newSearchParams.delete('packageId');
-        const newUrl = newSearchParams.toString() 
+        const newUrl = newSearchParams.toString()
           ? `${window.location.pathname}?${newSearchParams.toString()}`
           : window.location.pathname;
         router.replace(newUrl, { scroll: false });
@@ -273,14 +273,14 @@ export default function CatererDetailPage() {
     // Helper function to check if dish matches dietary filters
     const matchesDietaryFilters = (dish: any): boolean => {
       if (dietaryFilters.size === 0) return true; // No filters selected, show all
-      
+
       // Get free_forms from dish (dietary information)
       const freeForms = dish.free_forms || [];
       const dietaryNames = freeForms.map((ff: any) => {
         const name = ff.name || (typeof ff === 'string' ? ff : '');
         return name.toLowerCase().trim();
       });
-      
+
       // Map UI filter names to possible database names
       const filterMap: { [key: string]: string[] } = {
         'gluten free': ['gluten free', 'gluten-free', 'gluten'],
@@ -290,14 +290,14 @@ export default function CatererDetailPage() {
         'dairy free': ['dairy free', 'dairy-free', 'lactose free', 'no dairy'],
         'nuts free': ['nuts free', 'nuts-free', 'nut free', 'nut-free', 'no nuts'],
       };
-      
+
       // Check if dish has at least one of the selected dietary preferences
       return Array.from(dietaryFilters).some(filter => {
         const filterLower = filter.toLowerCase().trim();
         const possibleNames = filterMap[filterLower] || [filterLower];
-        
-        return possibleNames.some(possibleName => 
-          dietaryNames.some((name: string) => 
+
+        return possibleNames.some(possibleName =>
+          dietaryNames.some((name: string) =>
             name.includes(possibleName) || possibleName.includes(name)
           )
         );
@@ -435,8 +435,8 @@ export default function CatererDetailPage() {
       if (!canSelectMoreInCategory(categoryName)) {
         const limit = categoryLimits[categoryName];
         showToast('error', `You can only select ${limit === null ? 'all' : limit} dish(es) from ${categoryName}`);
-      return;
-    }
+        return;
+      }
       newSelected.add(dishId);
     }
     setSelectedDishes(newSelected);
@@ -589,8 +589,8 @@ export default function CatererDetailPage() {
               package_id: customPackage.id,
               guests: guestCount,
               price_at_time: totalPrice,
-      date: eventDate,
-    });
+              date: eventDate,
+            });
 
             if (cartRes.error) {
               showToast('error', cartRes.error);
@@ -886,59 +886,59 @@ export default function CatererDetailPage() {
                 {caterer.name}
               </h1>
               <div className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200">
-              {caterer.image_url ? (
-                <Image
-                  src={caterer.image_url}
-                  alt={caterer.name}
-                  fill
-                  className="object-contain"
-                  unoptimized
-                />
-              ) : (
+                {caterer.image_url ? (
+                  <Image
+                    src={caterer.image_url}
+                    alt={caterer.name}
+                    fill
+                    className="object-contain"
+                    unoptimized
+                  />
+                ) : (
                   <div className="w-full h-full flex items-center justify-center text-white font-bold text-2xl bg-green-500">
-                  {logoText}
-                </div>
-              )}
+                    {logoText}
+                  </div>
+                )}
               </div>
             </div>
 
-              {/* Cuisines */}
+            {/* Cuisines */}
             <div className="flex flex-wrap gap-2 mb-4">
-                {caterer.cuisines.map((cuisine) => (
-                  <span
-                    key={cuisine}
+              {caterer.cuisines.map((cuisine) => (
+                <span
+                  key={cuisine}
                   className="text-xs font-medium bg-green-50 text-green-700 px-3 py-1 rounded-full"
-                  >
-                    {cuisine}
-                  </span>
-                ))}
-              </div>
+                >
+                  {cuisine}
+                </span>
+              ))}
+            </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 gap-4 mb-6">
-                {packages[0]?.rating && (
+              {packages[0]?.rating && (
                 <div className="flex items-center gap-2 text-gray-700">
                   <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
                   <span className="font-semibold">
                     {Number(packages[0].rating).toFixed(1)} <span className="text-gray-400 font-normal text-sm">Rating</span>
-                    </span>
-                  </div>
-                )}
-                {caterer.location && (
+                  </span>
+                </div>
+              )}
+              {caterer.location && (
                 <div className="flex items-center gap-2 text-gray-700">
                   <MapPin className="w-5 h-5 text-gray-400" />
                   <span className="text-sm font-medium">{caterer.location}</span>
-                  </div>
-                )}
-                {(caterer.minimum_guests || caterer.maximum_guests) && (
+                </div>
+              )}
+              {(caterer.minimum_guests || caterer.maximum_guests) && (
                 <div className="flex items-center gap-2 text-gray-700 col-span-2">
                   <Users className="w-5 h-5 text-gray-400" />
                   <span className="text-sm">
                     Capacity: <span className="font-semibold">{caterer.minimum_guests || 0} - {caterer.maximum_guests || 'Unlimited'}</span> guests
-                    </span>
-                  </div>
-                )}
-              </div>
+                  </span>
+                </div>
+              )}
+            </div>
 
             <div className="border-t border-gray-100 my-4 pt-4">
               {/* Description */}
@@ -979,7 +979,7 @@ export default function CatererDetailPage() {
         {/* Tabs */}
         <div className="bg-white rounded-xl border border-gray-200 p-1 mb-6">
           <div className="flex gap-1">
-            {[ 
+            {[
               { id: 'packages', label: 'Set Menus' },
               { id: 'buildOwn', label: 'Build Your Own' },
               { id: 'requestQuote', label: 'Customized Menu' },
@@ -988,8 +988,8 @@ export default function CatererDetailPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as TabType)}
                 className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition ${activeTab === tab.id
-                    ? 'bg-green-600 text-white shadow-sm'
-                    : 'text-gray-600 hover:bg-gray-50'
+                  ? 'bg-green-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-50'
                   }`}
               >
                 {tab.label}
@@ -1035,7 +1035,7 @@ export default function CatererDetailPage() {
                     onBlur={(e) => {
                       const inputValue = e.target.value.trim();
                       const numValue = Number(inputValue);
-                      
+
                       // Validate and clamp on blur
                       if (inputValue === '' || isNaN(numValue) || numValue < 1) {
                         const minGuests = caterer.minimum_guests || 1;
@@ -1043,7 +1043,7 @@ export default function CatererDetailPage() {
                         setGuestCountInput(String(minGuests));
                         return;
                       }
-                      
+
                       // Clamp to min/max range
                       const minGuests = caterer.minimum_guests || 1;
                       const maxGuests = caterer.maximum_guests || 9999;
@@ -1082,11 +1082,11 @@ export default function CatererDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Packages */}
             <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
-                {fixedPackages.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">
-                    No fixed menu packages available from this caterer.
-                  </p>
-                ) : (
+              {fixedPackages.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">
+                  No fixed menu packages available from this caterer.
+                </p>
+              ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {fixedPackages.map((pkg) => {
                     const isSelected = selectedPackage?.id === pkg.id;
@@ -1127,10 +1127,21 @@ export default function CatererDetailPage() {
                       >
                         {/* Selection indicator */}
                         {isSelected && (
-                          <div className="absolute top-3 right-3 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                          <div className="absolute top-3 right-3 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center z-10">
                             <Check className="w-4 h-4 text-white" />
                           </div>
                         )}
+
+                        {/* Package Image */}
+                        <div className="relative h-48 w-[calc(100%+2.5rem)] -mx-5 -mt-5 mb-4 overflow-hidden rounded-t-lg bg-gray-100">
+                          <Image
+                            src={pkg.cover_image_url || '/logo2.svg'}
+                            alt={pkg.name}
+                            fill
+                            className={pkg.cover_image_url ? "object-cover" : "object-contain p-8"}
+                            unoptimized
+                          />
+                        </div>
 
                         {/* Title */}
                         <h3 className="font-bold text-lg text-gray-900 mb-2 pr-8">
@@ -1288,9 +1299,8 @@ export default function CatererDetailPage() {
                         return (
                           <label
                             key={addOn.id}
-                            className={`flex items-start gap-3 p-3 bg-white rounded-lg border-2 cursor-pointer transition-all ${
-                              isSelected ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
-                            } ${!addOn.is_active ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`flex items-start gap-3 p-3 bg-white rounded-lg border-2 cursor-pointer transition-all ${isSelected ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
+                              } ${!addOn.is_active ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             <input
                               type="checkbox"
@@ -1407,10 +1417,10 @@ export default function CatererDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Packages */}
             <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
-                {customizablePackages.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">
-                    No customizable menu packages available from this caterer.
-                  </p>
+              {customizablePackages.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">
+                  No customizable menu packages available from this caterer.
+                </p>
               ) : selectedCustomizablePackage ? (
                 // Show header with selected package and Change button
                 <div className="flex items-center justify-between mb-6">
@@ -1462,10 +1472,21 @@ export default function CatererDetailPage() {
                       >
                         {/* Selection indicator */}
                         {isSelected && (
-                          <div className="absolute top-3 right-3 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                          <div className="absolute top-3 right-3 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center z-10">
                             <Check className="w-4 h-4 text-white" />
                           </div>
                         )}
+
+                        {/* Package Image */}
+                        <div className="relative h-48 w-[calc(100%+2.5rem)] -mx-5 -mt-5 mb-4 overflow-hidden rounded-t-lg bg-gray-100">
+                          <Image
+                            src={pkg.cover_image_url || '/logo2.svg'}
+                            alt={pkg.name}
+                            fill
+                            className={pkg.cover_image_url ? "object-cover" : "object-contain p-8"}
+                            unoptimized
+                          />
+                        </div>
 
                         {/* Package Header */}
                         <div className="flex items-start justify-between mb-3 pr-8">
@@ -1514,8 +1535,8 @@ export default function CatererDetailPage() {
                                 +{Object.keys(menuSummary).length - 5} more categories
                               </p>
                             )}
-                  </div>
-                )}
+                          </div>
+                        )}
 
                         {/* Price Summary */}
                         <div className="border-t border-gray-100 pt-4">
@@ -1524,8 +1545,8 @@ export default function CatererDetailPage() {
                               {pkg.is_custom_price ? 'Total:' : `Total for ${guestCount} guests:`}
                             </span>
                             <span className="font-bold text-gray-900">AED {totalPrice.toLocaleString()}</span>
-              </div>
-            </div>
+                          </div>
+                        </div>
                       </div>
                     );
                   })}
@@ -1592,8 +1613,8 @@ export default function CatererDetailPage() {
                         {dietaryFilters.size > 0
                           ? 'No dishes match the selected dietary preferences. Try adjusting your filters.'
                           : selectedCustomizablePackage.category_selections && selectedCustomizablePackage.category_selections.length > 0
-                          ? 'No dishes available for this package. Please contact the caterer.'
-                          : 'No dishes available for selection.'}
+                            ? 'No dishes available for this package. Please contact the caterer.'
+                            : 'No dishes available for selection.'}
                       </p>
                       {selectedCustomizablePackage.items && selectedCustomizablePackage.items.length === 0 && (
                         <p className="text-gray-400 text-sm">
@@ -1913,8 +1934,8 @@ export default function CatererDetailPage() {
                             setDietaryPreferences(newPrefs);
                           }}
                           className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${isSelected
-                              ? 'bg-green-100 text-green-700 border border-green-300'
-                              : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                            ? 'bg-green-100 text-green-700 border border-green-300'
+                            : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
                             }`}
                         >
                           {pref}
@@ -1943,8 +1964,8 @@ export default function CatererDetailPage() {
                 onClick={handleRequestQuote}
                 disabled={submittingQuote}
                 className={`w-full py-3 rounded-lg font-medium transition ${submittingQuote
-                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    : 'bg-green-600 text-white hover:bg-green-700'
+                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  : 'bg-green-600 text-white hover:bg-green-700'
                   }`}
               >
                 {submittingQuote ? 'Submitting...' : 'Submit Quote Request'}
@@ -1953,7 +1974,7 @@ export default function CatererDetailPage() {
           </div>
         )}
 
-              </div>
+      </div>
 
       {/* Toast */}
       {toast && (
@@ -1966,12 +1987,12 @@ export default function CatererDetailPage() {
           onClick={() => setIsGalleryOpen(false)}
         >
           {/* Close button */}
-              <button
+          <button
             className="absolute top-4 right-4 text-white/70 hover:text-white p-2 z-50 transition-colors"
             onClick={() => setIsGalleryOpen(false)}
           >
             <X size={32} />
-              </button>
+          </button>
 
           <div
             className="relative w-full max-w-6xl max-h-[90vh] flex items-center justify-center"
@@ -2005,10 +2026,10 @@ export default function CatererDetailPage() {
                   unoptimized
                 />
               )}
-              </div>
+            </div>
 
             {/* Next button */}
-              <button
+            <button
               className="absolute right-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed z-10"
               onClick={(e) => {
                 e.stopPropagation();
@@ -2021,13 +2042,13 @@ export default function CatererDetailPage() {
               }}
             >
               <ChevronRight size={32} />
-              </button>
+            </button>
 
             {/* Image counter */}
             {caterer.gallery_images && (
               <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 px-4 py-1 rounded-full text-white text-sm backdrop-blur-md">
                 {currentImageIndex + 1} / {caterer.gallery_images.length}
-            </div>
+              </div>
             )}
           </div>
         </div>

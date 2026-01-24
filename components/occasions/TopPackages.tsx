@@ -25,7 +25,7 @@ export default function TopPackages({ occasionId, occasionName }: TopPackagesPro
           occasion_id: occasionId,
           sort_by: 'rating_desc', // Show top-rated packages first
         });
-        
+
         if (response.data?.data) {
           // Take top 6 packages for display
           setPackages(response.data.data.slice(0, 6));
@@ -44,7 +44,7 @@ export default function TopPackages({ occasionId, occasionName }: TopPackagesPro
 
   const handleViewAll = () => {
     if (occasionId) {
-      router.push(`/caterers?occasion_id=${encodeURIComponent(occasionId)}`);
+      router.push(`/packages?occasion_id=${encodeURIComponent(occasionId)}&occasion_name=${encodeURIComponent(occasionName)}`);
     }
   };
 
@@ -113,7 +113,7 @@ export default function TopPackages({ occasionId, occasionName }: TopPackagesPro
                         target.src = '/user/package1.svg';
                       }}
                     />
-                    
+
                     {/* Rating Badge */}
                     {rating && (
                       <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-1">
@@ -143,8 +143,8 @@ export default function TopPackages({ occasionId, occasionName }: TopPackagesPro
                     <div className="flex items-baseline justify-between pt-3 border-t border-gray-100">
                       <div>
                         <p className="text-gray-900 font-semibold text-lg">
-                          AED {typeof pkg.total_price === 'number' 
-                            ? pkg.total_price.toLocaleString() 
+                          AED {typeof pkg.total_price === 'number'
+                            ? pkg.total_price.toLocaleString()
                             : parseInt(String(pkg.total_price || '0'), 10).toLocaleString()}
                         </p>
                         {!pkg.is_custom_price && (
