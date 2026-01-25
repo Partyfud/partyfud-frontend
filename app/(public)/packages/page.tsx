@@ -711,7 +711,7 @@ export default function PackagesPage() {
                                                         <div className="text-xs text-gray-400 font-medium mt-0.5">for {minimumPeople} people</div>
                                                     </div>
                                                     <Link
-                                                        href={`/caterers/${pkg.catererId}/${pkg.id}`}
+                                                        href={`/caterers/${pkg.catererId}?packageId=${pkg.id}`}
                                                         className="bg-[#268700] hover:bg-[#1f6b00] text-white px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-lg hover:shadow-xl active:scale-95"
                                                     >
                                                         View Package
