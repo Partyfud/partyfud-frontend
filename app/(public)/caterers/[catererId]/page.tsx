@@ -838,14 +838,14 @@ export default function CatererDetailPage() {
           <span className="text-gray-900">{caterer.name}</span>
         </nav>
 
-        <div className={`grid grid-cols-1 ${caterer.gallery_images && caterer.gallery_images.length > 0 ? 'lg:grid-cols-2' : ''} transition-all duration-300 ${scrolled ? 'gap-4 mb-4 py-2' : 'gap-8 mb-8'}`}>
+        <div className={`grid grid-cols-1 ${caterer.gallery_images && caterer.gallery_images.length > 0 ? 'lg:grid-cols-2' : ''} gap-6 mb-6 transition-all duration-300 ease-in-out`}>
           {/* Left Column - Caterer Info */}
-          <div className={`bg-white rounded-xl border border-gray-200 transition-all duration-300 ${scrolled ? 'p-4' : 'p-6'} h-fit`}>
+          <div className="bg-white rounded-xl border border-gray-200 p-6 h-fit transition-all duration-300 ease-in-out">
             <div className="flex items-start justify-between gap-4 mb-4">
-              <h1 className={`font-bold text-gray-900 transition-all duration-300 ${scrolled ? 'text-xl' : 'text-3xl'}`}>
+              <h1 className={`font-bold text-gray-900 transition-all duration-300 ease-in-out origin-left ${scrolled ? 'text-xl' : 'text-3xl'}`}>
                 {caterer.name}
               </h1>
-              <div className={`relative rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200 transition-all duration-300 ${scrolled ? 'w-16 h-16' : 'w-24 h-24'}`}>
+              <div className={`relative rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200 transition-all duration-300 ease-in-out ${scrolled ? 'w-14 h-14' : 'w-24 h-24'}`}>
                 {caterer.image_url ? (
                   <Image
                     src={caterer.image_url}
@@ -863,7 +863,7 @@ export default function CatererDetailPage() {
             </div>
 
             {/* Cuisines */}
-            <div className={`flex flex-wrap gap-2 ${scrolled ? 'mb-2' : 'mb-4'}`}>
+            <div className={`flex flex-wrap gap-2 transition-all duration-300 mb-4`}>
               {caterer.cuisines.map((cuisine) => (
                 <span
                   key={cuisine}
@@ -874,11 +874,11 @@ export default function CatererDetailPage() {
               ))}
             </div>
 
-            {/* Stats Grid - Hide in compact mode if desired, or just shrink */}
-            <div className={`grid grid-cols-2 gap-4 ${scrolled ? 'mb-2 text-xs' : 'mb-6'}`}>
+            {/* Stats Grid */}
+            <div className={`grid grid-cols-2 gap-4 transition-all duration-300 ${scrolled ? 'mb-2 text-xs' : 'mb-6'}`}>
               {packages[0]?.rating && (
                 <div className="flex items-center gap-2 text-gray-700">
-                  <Star className={`${scrolled ? 'w-4 h-4' : 'w-5 h-5'} text-yellow-400 fill-yellow-400`} />
+                  <Star className={`transition-all duration-300 ${scrolled ? 'w-4 h-4' : 'w-5 h-5'} text-yellow-400 fill-yellow-400`} />
                   <span className="font-semibold">
                     {Number(packages[0].rating).toFixed(1)} <span className="text-gray-400 font-normal text-sm">Rating</span>
                   </span>
@@ -886,27 +886,29 @@ export default function CatererDetailPage() {
               )}
               {caterer.location && (
                 <div className="flex items-center gap-2 text-gray-700">
-                  <MapPin className={`${scrolled ? 'w-4 h-4' : 'w-5 h-5'} text-gray-400`} />
-                  <span className={`${scrolled ? 'text-xs' : 'text-sm'} font-medium`}>{caterer.location}</span>
+                  <MapPin className={`transition-all duration-300 ${scrolled ? 'w-4 h-4' : 'w-5 h-5'} text-gray-400`} />
+                  <span className={`transition-all duration-300 ${scrolled ? 'text-xs' : 'text-sm'} font-medium`}>{caterer.location}</span>
                 </div>
               )}
               {(caterer.minimum_guests || caterer.maximum_guests) && (
                 <div className="flex items-center gap-2 text-gray-700 col-span-2">
-                  <Users className={`${scrolled ? 'w-4 h-4' : 'w-5 h-5'} text-gray-400`} />
-                  <span className={`${scrolled ? 'text-xs' : 'text-sm'}`}>
+                  <Users className={`transition-all duration-300 ${scrolled ? 'w-4 h-4' : 'w-5 h-5'} text-gray-400`} />
+                  <span className={`transition-all duration-300 ${scrolled ? 'text-xs' : 'text-sm'}`}>
                     Capacity: <span className="font-semibold">{caterer.minimum_guests || 0} - {caterer.maximum_guests || 'Unlimited'}</span> guests
                   </span>
                 </div>
               )}
             </div>
 
-            <div className={`border-t border-gray-100 ${scrolled ? 'my-2 pt-2' : 'my-4 pt-4'}`}>
-              {/* Description - Hide when scrolled */}
-              {!scrolled && caterer.description && (
-                <p className="text-gray-600 text-sm leading-relaxed mb-4">
-                  {caterer.description}
-                </p>
-              )}
+            <div className={`border-t border-gray-100 transition-all duration-300 ${scrolled ? 'my-2 pt-2' : 'my-4 pt-4'}`}>
+              {/* Description - Animated hide/show */}
+              <div className={`transform-gpu overflow-hidden transition-all duration-300 ease-in-out ${scrolled ? 'max-h-0 opacity-0 mb-0' : 'max-h-96 opacity-100 mb-4'}`}>
+                {caterer.description && (
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    {caterer.description}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Service & Price */}
@@ -916,8 +918,9 @@ export default function CatererDetailPage() {
                 <span className="font-bold text-gray-900">{caterer.priceRange}</span>
               </div>
 
-              {!scrolled && (
-                <div className="flex flex-wrap gap-2">
+              {/* Tags - Animated hide/show */}
+              <div className={`transform-gpu overflow-hidden transition-all duration-300 ease-in-out ${scrolled ? 'max-h-0 opacity-0' : 'max-h-20 opacity-100'}`}>
+                <div className="flex flex-wrap gap-2 pt-1">
                   {caterer.delivery_only && (
                     <span className="text-xs border border-blue-100 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md flex items-center gap-1.5">
                       <ChefHat className="w-3.5 h-3.5" /> Delivery
@@ -934,7 +937,7 @@ export default function CatererDetailPage() {
                     </span>
                   )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
 
@@ -942,14 +945,14 @@ export default function CatererDetailPage() {
           {caterer.gallery_images && caterer.gallery_images.length > 0 && (
             <div className="flex flex-col h-full transition-all duration-300">
               <div
-                className={`relative w-full rounded-2xl overflow-hidden cursor-pointer group transition-all duration-300 ${scrolled ? 'h-48' : 'aspect-[4/3] lg:aspect-auto lg:flex-1 lg:min-h-0 mb-4'}`}
+                className="relative w-full rounded-2xl overflow-hidden cursor-pointer group transition-all duration-300 ease-in-out aspect-[4/3] lg:aspect-auto lg:flex-1 lg:min-h-0 mb-4"
                 onClick={() => setIsGalleryOpen(true)}
               >
                 <Image
                   src={caterer.gallery_images[currentImageIndex]}
                   alt="Main Gallery Image"
                   fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
                   unoptimized
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
@@ -958,37 +961,39 @@ export default function CatererDetailPage() {
                 </div>
               </div>
 
-              {/* Thumbnails - Hide when scrolled */}
-              {!scrolled && caterer.gallery_images && caterer.gallery_images.length > 1 && (
-                <div className="grid grid-cols-5 gap-2 flex-shrink-0">
-                  {caterer.gallery_images.slice(0, 5).map((img, idx) => (
-                    <div
-                      key={idx}
-                      className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-100 transition-all ${currentImageIndex === idx ? 'ring-2 ring-green-500 opacity-100' : 'opacity-70'
-                        }`}
-                      onClick={() => {
-                        setCurrentImageIndex(idx);
-                        if (idx === 4 && caterer.gallery_images && caterer.gallery_images.length > 5) {
-                          setIsGalleryOpen(true);
-                        }
-                      }}
-                    >
-                      <Image
-                        src={img}
-                        alt={`Thumbnail ${idx + 1}`}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                      {idx === 4 && caterer.gallery_images && caterer.gallery_images.length > 5 && (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-xs font-bold">
-                          +{caterer.gallery_images.length - 5}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Thumbnails - Animated hide/show */}
+              <div className={`transform-gpu overflow-hidden transition-all duration-300 ease-in-out ${scrolled ? 'max-h-0 opacity-0' : 'max-h-40 opacity-100'}`}>
+                {caterer.gallery_images && caterer.gallery_images.length > 1 && (
+                  <div className="grid grid-cols-5 gap-2 flex-shrink-0 pt-1">
+                    {caterer.gallery_images.slice(0, 5).map((img, idx) => (
+                      <div
+                        key={idx}
+                        className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-100 transition-all ${currentImageIndex === idx ? 'ring-2 ring-green-500 ring-inset opacity-100' : 'opacity-70'
+                          }`}
+                        onClick={() => {
+                          setCurrentImageIndex(idx);
+                          if (idx === 4 && caterer.gallery_images && caterer.gallery_images.length > 5) {
+                            setIsGalleryOpen(true);
+                          }
+                        }}
+                      >
+                        <Image
+                          src={img}
+                          alt={`Thumbnail ${idx + 1}`}
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                        {idx === 4 && caterer.gallery_images && caterer.gallery_images.length > 5 && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-xs font-bold">
+                            +{caterer.gallery_images.length - 5}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
