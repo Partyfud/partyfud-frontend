@@ -649,9 +649,10 @@ export default function PackagesPage() {
                                     const minimumPeople = apiPkg?.minimum_people || apiPkg?.people_count || 1;
 
                                     return (
-                                        <div
+                                        <Link
                                             key={pkg.id}
-                                            className="bg-white rounded-[1.5rem] overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col"
+                                            href={`/caterers/${pkg.catererId}?packageId=${pkg.id}`}
+                                            className="bg-white rounded-[1.5rem] overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer"
                                         >
                                             {/* Image Section */}
                                             <div className="relative h-[240px] w-full bg-gray-50">
@@ -730,15 +731,14 @@ export default function PackagesPage() {
                                                         </div>
                                                         <div className="text-xs text-gray-400 font-medium mt-0.5 whitespace-nowrap">for {minimumPeople} people</div>
                                                     </div>
-                                                    <Link
-                                                        href={`/caterers/${pkg.catererId}?packageId=${pkg.id}`}
-                                                        className="bg-[#268700] hover:bg-[#1f6b00] text-white px-4 py-2.5 rounded-lg font-bold text-sm transition-all shadow-md hover:shadow-lg active:scale-95 whitespace-nowrap"
+                                                    <div
+                                                        className="bg-[#268700] hover:bg-[#1f6b00] text-white px-4 py-2.5 rounded-lg font-bold text-sm transition-all shadow-md hover:shadow-lg active:scale-95 whitespace-nowrap pointer-events-none"
                                                     >
                                                         View Package
-                                                    </Link>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        </Link>
                                     );
                                 })}
                             </div>
