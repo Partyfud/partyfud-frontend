@@ -11,6 +11,7 @@ export interface Dish {
   quantity?: string;
   pieces?: number;
   price: number;
+  serves_people?: number;
   currency: string;
   is_active: boolean;
   rating?: number;
@@ -28,6 +29,7 @@ export interface CreateDishRequest {
   quantity?: string;
   pieces?: number;
   price: number;
+  serves_people?: number;
   currency?: string;
   is_active?: boolean;
   free_form?: string;
@@ -43,6 +45,7 @@ export interface UpdateDishRequest {
   quantity?: string;
   pieces?: number;
   price?: number;
+  serves_people?: number;
   currency?: string;
   is_active?: boolean;
   freeform_ids?: string[];
@@ -193,6 +196,9 @@ export const catererApi = {
       formData.append('pieces', data.pieces.toString());
     }
     formData.append('price', data.price.toString());
+    if (data.serves_people !== undefined && data.serves_people !== null) {
+      formData.append('serves_people', data.serves_people.toString());
+    }
     if (data.currency) {
       formData.append('currency', data.currency);
     }
@@ -223,7 +229,14 @@ export const catererApi = {
       // Add all dish data fields
       Object.entries(data).forEach(([key, value]) => {
         if (value !== undefined && value !== null && key !== 'freeform_ids') {
-          formData.append(key, value.toString());
+          // For serves_people, only send if it has a valid value (not empty string)
+          if (key === 'serves_people') {
+            if (value !== '' && value !== null) {
+              formData.append(key, value.toString());
+            }
+          } else {
+            formData.append(key, value.toString());
+          }
         }
       });
 
@@ -244,10 +257,14 @@ export const catererApi = {
         headers: {}, // Override default Content-Type header for FormData
       });
     } else {
-      // Regular JSON request without image
+      // Regular JSON request without image - filter out undefined and null serves_people
+      const cleanedData = { ...data };
+      if (cleanedData.serves_people === null || cleanedData.serves_people === undefined) {
+        cleanedData.serves_people = undefined;
+      }
       return apiRequest<Dish>(`/api/caterer/dishes/${id}`, {
         method: 'PUT',
-        body: JSON.stringify(data),
+        body: JSON.stringify(cleanedData),
       });
     }
   },

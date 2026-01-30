@@ -268,10 +268,22 @@ export default function CheckoutPage() {
   // Calculate prices based on guest count
   // In checkout, use the form's guestCount (which applies to all items)
   // This allows users to change guest count for all items at once
+  // Use price_at_time from backend (calculated with serves_people) if guest count matches
+  // Otherwise, we'll need to update cart items to get recalculated prices
   const calculateItemPrice = (item: CartItem) => {
-    const pricePerPerson = item.package.price_per_person ||
-      (item.package.total_price / (item.package.people_count || 1));
-    const packagePrice = Math.round(pricePerPerson * guestCount);
+    // Use price_at_time if guest count matches (calculated by backend with serves_people)
+    let packagePrice = 0;
+    if (item.price_at_time && item.guests === guestCount) {
+      // Use price_at_time if guest count matches - this was calculated with serves_people
+      packagePrice = item.price_at_time;
+    } else {
+      // If guest count doesn't match, we need to recalculate
+      // For now, use simple calculation as fallback
+      // The actual recalculation will happen when user proceeds to review/payment
+      const pricePerPerson = item.package.price_per_person ||
+        (item.package.total_price / (item.package.people_count || 1));
+      packagePrice = Math.round(pricePerPerson * guestCount);
+    }
 
     // Add add-ons prices (add-ons are fixed price, not multiplied by guest count)
     const addOnsPrice = item.add_ons && item.add_ons.length > 0
@@ -291,11 +303,41 @@ export default function CheckoutPage() {
   const isEventDetailsValid = eventDate && eventTime && eventType && guestCount > 0 && streetAddress && area;
   const isPaymentValid = paymentMethod === 'pay_on_delivery';
 
-  const handleContinueToReview = () => {
+  const handleContinueToReview = async () => {
     if (!isEventDetailsValid) {
       showToast('error', 'Please fill in all required fields');
       return;
     }
+    
+    // Update cart items with new guest count and let backend recalculate prices with serves_people
+    setSyncingCart(true);
+    try {
+      // Update all cart items with new guest count (don't send price_at_time so backend recalculates)
+      const updatePromises = cartItems.map(item => {
+        if (item.guests !== guestCount) {
+          return userApi.updateCartItem(item.id, {
+            guests: guestCount,
+            // Don't send price_at_time - let backend recalculate with serves_people
+          });
+        }
+        return Promise.resolve();
+      });
+      
+      await Promise.all(updatePromises);
+      
+      // Refetch cart items to get updated prices from backend
+      const updatedCartRes = await userApi.getCartItems();
+      if (updatedCartRes.data?.data) {
+        setCartItems(updatedCartRes.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to update cart items:', err);
+      showToast('error', 'Failed to update prices. Please try again.');
+      return;
+    } finally {
+      setSyncingCart(false);
+    }
+    
     setCurrentStep('review');
   };
 
@@ -317,11 +359,23 @@ export default function CheckoutPage() {
     setPlacingOrder(true);
     try {
       // Update cart items with new guest count before placing order
-      for (const item of cartItems) {
-        await userApi.updateCartItem(item.id, {
-          guests: guestCount,
-          price_at_time: calculateItemPrice(item),
-        });
+      // Let backend recalculate prices with serves_people - don't send price_at_time
+      const updatePromises = cartItems.map(item => {
+        if (item.guests !== guestCount) {
+          return userApi.updateCartItem(item.id, {
+            guests: guestCount,
+            // Don't send price_at_time - let backend recalculate with serves_people
+          });
+        }
+        return Promise.resolve();
+      });
+      
+      await Promise.all(updatePromises);
+      
+      // Refetch cart items to get updated prices from backend
+      const updatedCartRes = await userApi.getCartItems();
+      if (updatedCartRes.data?.data) {
+        setCartItems(updatedCartRes.data.data);
       }
 
       const res = await userApi.createOrder({

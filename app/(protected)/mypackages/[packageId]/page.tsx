@@ -8,6 +8,7 @@ import { userApi, type Package } from '@/lib/api/user.api';
 import { Check, Plus, Minus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UAE_EMIRATES } from '@/lib/constants';
+import { calculateDishPriceForGuests } from '@/lib/utils/priceCalculation';
 // import { Testimonials } from '@/user/Testimonials';
 
 interface Occasion {
@@ -207,12 +208,8 @@ export default function PackageDetailsPage() {
             dateObj.setHours(18, 0, 0, 0); // Set to 6 PM local time
             const isoDate = dateObj.toISOString();
 
-            // Calculate price based on guests (scale from package price)
-            // If guests = people_count, use original price
-            // If guests = 2x people_count, use 2x price, etc.
-            const peopleCount = pkg.people_count || pkg.minimum_people || 1;
-            const priceMultiplier = guests / peopleCount;
-            const calculatedPrice = pkg.total_price * priceMultiplier;
+            // Let backend calculate price based on serves_people
+            // Don't send price_at_time so backend can recalculate properly
 
             // Prepare add-ons array for API (quantity is always 1 for checkbox selection)
             const addOnsArray = Array.from(selectedAddOns).map((addOnId) => ({
@@ -225,7 +222,7 @@ export default function PackageDetailsPage() {
                 location: location,
                 guests: guests,
                 date: isoDate,
-                price_at_time: calculatedPrice,
+                // Don't send price_at_time - let backend calculate with serves_people
                 add_ons: addOnsArray.length > 0 ? addOnsArray : undefined,
             };
 
@@ -382,7 +379,11 @@ export default function PackageDetailsPage() {
         selectedDishes.forEach((dishId) => {
             const dish = getAllDishesFromPackage().find(d => d.id === dishId);
             if (dish) {
-                total += Math.round(Number(dish.price)) * guests;
+                const dishPrice = Math.round(Number(dish.price));
+                const servesPeople = dish.serves_people ?? null;
+                // Use the new calculation function that considers serves_people
+                const dishPriceForGuests = calculateDishPriceForGuests(dishPrice, servesPeople, guests);
+                total += dishPriceForGuests;
             }
         });
         return total;
@@ -823,10 +824,32 @@ export default function PackageDetailsPage() {
                         <div className="text-lg flex items-center gap-1">
                             <img src="/dirham.svg" alt="AED" className="w-5 h-5" />
                             {(() => {
-                                const peopleCount = pkg.people_count || pkg.minimum_people || 1;
-                                const basePrice = guests > 0 && guests !== peopleCount 
-                                    ? pkg.total_price * (guests / peopleCount)
-                                    : pkg.total_price ?? 0;
+                                let basePrice = 0;
+                                const guestCount = guests > 0 ? guests : (pkg.people_count || pkg.minimum_people || 1);
+                                
+                                // If package has custom price, use it as-is
+                                if (pkg.is_custom_price) {
+                                    basePrice = pkg.total_price ?? 0;
+                                } else if (pkg.items && pkg.items.length > 0) {
+                                    // Calculate from package items using serves_people
+                                    pkg.items.forEach((item: any) => {
+                                        const dish = item.dish;
+                                        if (dish) {
+                                            const dishPrice = Number(item.price_at_time || dish.price || 0);
+                                            const quantity = item.quantity || 1;
+                                            const servesPeople = dish.serves_people ?? null;
+                                            const dishPriceForGuests = calculateDishPriceForGuests(dishPrice, servesPeople, guestCount);
+                                            basePrice += dishPriceForGuests * quantity;
+                                        }
+                                    });
+                                    basePrice = Math.round(basePrice);
+                                } else {
+                                    // Fallback to simple scaling if no items
+                                    const peopleCount = pkg.people_count || pkg.minimum_people || 1;
+                                    basePrice = guests > 0 && guests !== peopleCount 
+                                        ? pkg.total_price * (guests / peopleCount)
+                                        : pkg.total_price ?? 0;
+                                }
                                 
                                 // Add add-ons price
                                 const addOnsTotal = Array.from(selectedAddOns).reduce((sum, addOnId) => {

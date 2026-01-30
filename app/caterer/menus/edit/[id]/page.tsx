@@ -135,6 +135,7 @@ export default function EditMenuItemPage() {
           is_active: dishData.is_active,
           quantity: dishData.quantity,
           pieces: dishData.pieces,
+          serves_people: dishData.serves_people,
           cuisine_type_id: dishData.cuisine_type?.id || dishData.cuisine_type_id,
           category_id: dishData.category?.id || dishData.category_id,
           sub_category_id: dishData.sub_category?.id || dishData.sub_category_id,
@@ -348,15 +349,20 @@ export default function EditMenuItemPage() {
               </div>
             </div>
 
-            <Input
-              label="Number of Pieces *"
-              type="number"
-              min="1"
-              value={formData.pieces || ''}
-              onChange={(e) => setFormData({ ...formData, pieces: parseInt(e.target.value) || 1 })}
-              placeholder="e.g., 2"
-              error={formErrors.pieces}
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Serves People (Optional)
+              </label>
+              <Input
+                type="number"
+                min="1"
+                value={formData.serves_people || ''}
+                onChange={(e) => setFormData({ ...formData, serves_people: e.target.value ? parseInt(e.target.value) : undefined })}
+                placeholder=""
+                error={formErrors.serves_people}
+              />
+              <p className="mt-1 text-xs text-gray-600">Number of people this dish serves. Used for price calculation when added to packages.</p>
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">

@@ -9,6 +9,7 @@ import { Star, MapPin, Users, ChefHat, ShoppingCart, Plus, Minus, Check, Calenda
 import { useAuth } from '@/contexts/AuthContext';
 import { Toast, useToast } from '@/components/ui/Toast';
 import { getLogoText, getMinEventDate, UAE_EMIRATES } from '@/lib/constants';
+import { calculateDishPriceForGuests } from '@/lib/utils/priceCalculation';
 
 type TabType = 'packages' | 'buildOwn' | 'requestQuote';
 
@@ -476,6 +477,7 @@ export default function CatererDetailPage() {
           dish: {
             id: dish.id,
             price: dish.price,
+            serves_people: dish.serves_people,
           },
           quantity: 1,
           price_at_time: dish.price,
@@ -486,14 +488,34 @@ export default function CatererDetailPage() {
         if (selectedDishes.has(dishId)) {
           const dishPrice = Number(item.price_at_time || item.dish?.price || 0);
           const quantity = item.quantity || 1;
-          selectedTotal += dishPrice * quantity * guestCount;
+          const servesPeople = item.dish?.serves_people ?? null;
+          // Use the new calculation function that considers serves_people
+          const dishPriceForGuests = calculateDishPriceForGuests(dishPrice, servesPeople, guestCount);
+          selectedTotal += dishPriceForGuests * quantity;
         }
       });
 
       return Math.round(selectedTotal);
     }
 
-    // For fixed packages or customizable without selections, scale price by guest count
+    // For fixed packages or customizable without selections
+    // If package has items with dish details, recalculate using serves_people
+    if (pkg.items && pkg.items.length > 0) {
+      let totalPrice = 0;
+      pkg.items.forEach((item: any) => {
+        const dish = item.dish;
+        if (dish) {
+          const dishPrice = Number(item.price_at_time || dish.price || 0);
+          const quantity = item.quantity || 1;
+          const servesPeople = dish.serves_people ?? null;
+          const dishPriceForGuests = calculateDishPriceForGuests(dishPrice, servesPeople, guestCount);
+          totalPrice += dishPriceForGuests * quantity;
+        }
+      });
+      return Math.round(totalPrice);
+    }
+
+    // Fallback to simple scaling if no items available
     const peopleCount = pkg.people_count || pkg.minimum_people || 1;
     // Ensure we're using Number() to convert from Decimal/string
     const totalPrice = typeof pkg.total_price === 'number' ? pkg.total_price : Number(pkg.total_price || 0);
@@ -596,11 +618,11 @@ export default function CatererDetailPage() {
           if (customPackageRes.data?.data) {
             const customPackage = customPackageRes.data.data;
 
-            // Add custom package to cart
+            // Add custom package to cart - let backend calculate price with serves_people
             const cartRes = await userApi.createCartItem({
               package_id: customPackage.id,
               guests: guestCount,
-              price_at_time: totalPrice,
+              // Don't send price_at_time - let backend recalculate with serves_people
               date: eventDate,
             });
 
@@ -694,11 +716,11 @@ export default function CatererDetailPage() {
             quantity: 1,
           }));
 
-          // Add to server cart for authenticated users
+          // Add to server cart for authenticated users - let backend calculate with serves_people
           const res = await userApi.createCartItem({
             package_id: pkg.id,
             guests: guestCount,
-            price_at_time: totalPrice,
+            // Don't send price_at_time - let backend recalculate with serves_people
             date: eventDate,
             event_time: eventTime,
             event_type: eventType,

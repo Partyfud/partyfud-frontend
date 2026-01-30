@@ -575,6 +575,20 @@ export default function MenusPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Serves People (Optional)
+                  </label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={createFormData.serves_people || ''}
+                    onChange={(e) => setCreateFormData({ ...createFormData, serves_people: e.target.value ? parseInt(e.target.value) : undefined })}
+                    placeholder=""
+                  />
+                  <p className="mt-1 text-xs text-gray-600">Number of people this dish serves. Used for price calculation when added to packages.</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Dietary Information
                   </label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 border border-gray-300 rounded-lg p-4 bg-gray-50">

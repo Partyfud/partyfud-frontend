@@ -140,40 +140,55 @@ export default function CartPage() {
       const item = cartItems.find(i => i.id === itemId);
       if (!item) return;
 
-      const pricePerPerson = item.package.price_per_person ||
-        (item.package.total_price / (item.package.people_count || 1));
-      const packagePrice = Math.round(pricePerPerson * newGuests);
-
-      // Add add-ons prices (add-ons are fixed price, not multiplied by guest count)
-      const addOnsPrice = item.add_ons && item.add_ons.length > 0
-        ? item.add_ons.reduce((sum, addOn) => sum + (addOn.add_on.price * addOn.quantity), 0)
-        : 0;
-
-      const newPrice = packagePrice + addOnsPrice;
-
       if (user) {
-        // Update on server for authenticated users
+        // Update on server for authenticated users - let backend recalculate price based on serves_people
         const res = await userApi.updateCartItem(itemId, {
           guests: newGuests,
-          price_at_time: newPrice,
+          // Don't send price_at_time - let backend recalculate based on serves_people
         });
         if (res.error) {
           showToast('error', res.error);
           return;
         }
+        
+        // Update cart items from response
+        if (res.data?.data) {
+          const updatedItem = res.data.data;
+          setCartItems((prev) =>
+            prev.map((item) =>
+              item.id === itemId
+                ? { ...item, guests: updatedItem.guests, price_at_time: updatedItem.price_at_time }
+                : item
+            )
+          );
+        }
       } else {
+        // For non-authenticated users, we need to calculate locally
+        // But we don't have package items with serves_people, so use simple calculation
+        // This is a limitation - non-authenticated users won't get serves_people calculation
+        const pricePerPerson = item.package.price_per_person ||
+          (item.package.total_price / (item.package.people_count || 1));
+        const packagePrice = Math.round(pricePerPerson * newGuests);
+
+        // Add add-ons prices (add-ons are fixed price, not multiplied by guest count)
+        const addOnsPrice = item.add_ons && item.add_ons.length > 0
+          ? item.add_ons.reduce((sum, addOn) => sum + (addOn.add_on.price * addOn.quantity), 0)
+          : 0;
+
+        const newPrice = packagePrice + addOnsPrice;
+
         // Update in localStorage for non-authenticated users
         const { cartStorage } = await import('@/lib/utils/cartStorage');
         cartStorage.updateGuestCount(itemId, newGuests, newPrice);
-      }
 
-      setCartItems((prev) =>
-        prev.map((item) =>
-          item.id === itemId
-            ? { ...item, guests: newGuests, price_at_time: newPrice }
-            : item
-        )
-      );
+        setCartItems((prev) =>
+          prev.map((item) =>
+            item.id === itemId
+              ? { ...item, guests: newGuests, price_at_time: newPrice }
+              : item
+          )
+        );
+      }
     } catch (err) {
       showToast('error', 'Failed to update guests');
     } finally {
@@ -198,11 +213,19 @@ export default function CartPage() {
   };
 
   // Calculate price for an item
+  // Use price_at_time from backend (which is calculated with serves_people) if available
   const calculateItemPrice = (item: CartItem) => {
-    const guests = item.guests || item.package.people_count || 1;
-    const pricePerPerson = item.package.price_per_person ||
-      (item.package.total_price / (item.package.people_count || 1));
-    const packagePrice = Math.round(pricePerPerson * guests);
+    // Use price_at_time if available (calculated by backend with serves_people)
+    let packagePrice = 0;
+    if (item.price_at_time) {
+      packagePrice = item.price_at_time;
+    } else {
+      // Fallback to simple calculation if price_at_time not available
+      const guests = item.guests || item.package.people_count || 1;
+      const pricePerPerson = item.package.price_per_person ||
+        (item.package.total_price / (item.package.people_count || 1));
+      packagePrice = Math.round(pricePerPerson * guests);
+    }
 
     // Add add-ons prices (add-ons are fixed price, not multiplied by guest count)
     const addOnsPrice = item.add_ons && item.add_ons.length > 0

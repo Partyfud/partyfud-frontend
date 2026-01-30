@@ -451,7 +451,11 @@ export default function EditPackagePage() {
 
     return selectedDishes.reduce((total, dish) => {
       const price = typeof dish.price === 'number' ? Math.round(dish.price) : Math.round(Number(dish.price) || 0);
-      return total + price * minPeople;
+      const servesPeople = dish.serves_people ?? null;
+      // Use the new calculation function that considers serves_people
+      const { calculateDishPriceForGuests } = require('@/lib/utils/priceCalculation');
+      const dishPriceForGuests = calculateDishPriceForGuests(price, servesPeople, minPeople);
+      return total + dishPriceForGuests;
     }, 0);
   }, [hasCustomPrice, formData.total_price, formData.minimum_people, minimumGuests, selectedDishes]);
 

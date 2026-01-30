@@ -114,6 +114,7 @@ export interface Dish {
   quantity?: string | null;
   pieces: number;
   price: number;
+  serves_people?: number | null;
   currency: string;
   is_active: boolean;
   free_forms: Array<{

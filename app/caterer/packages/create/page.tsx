@@ -682,10 +682,13 @@ export default function CreatePackagePage() {
     
     let totalPrice = 0;
     selectedDishes.forEach((dish) => {
-      // Calculate price: dish.price * minimum_people
-      // Note: This is a simplified calculation - backend will handle actual calculation
+      // Calculate price using serves_people if available
       const price = typeof dish.price === 'number' ? Math.round(dish.price) : Math.round(Number(dish.price) || 0);
-      totalPrice += price * (minPeople || 1);
+      const servesPeople = dish.serves_people ?? null;
+      // Use the new calculation function that considers serves_people
+      const { calculateDishPriceForGuests } = require('@/lib/utils/priceCalculation');
+      const dishPriceForGuests = calculateDishPriceForGuests(price, servesPeople, minPeople || 1);
+      totalPrice += dishPriceForGuests;
     });
 
     return totalPrice;
